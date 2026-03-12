@@ -13,9 +13,11 @@ export const useAvailableShippingCountries = (): UseAvailableShippingCountries =
 		pause: !checkout?.channel?.slug,
 	});
 
+	// Memoize country filtering with optimized dependency array to prevent redundant
+	// re-computation and avoid unnecessary re-renders in address forms
 	const availableShippingCountries: CountryCode[] = useMemo(
 		() => (data?.channel?.countries?.map(({ code }) => code) as CountryCode[]) || [],
-		[data?.channel?.countries],
+		[data?.channel?.countries?.length, data?.channel?.countries?.[0]?.code],
 	);
 
 	return { availableShippingCountries };
