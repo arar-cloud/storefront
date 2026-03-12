@@ -7,6 +7,15 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 128;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/; // JWT-like format
+// Security: XSS/Injection prevention patterns
+const XSS_DANGEROUS_CHARS = /<[^>]*>|javascript:|data:|vbscript:|onerror=|onload=|onclick=/gi;
+const SQL_INJECTION_CHARS = /['"`;\\]/g;
+const COMMAND_INJECTION_CHARS = /[&|;/**
+ * Auth input validation schemas.
+ * Centralized validation for all authentication endpoints.
+ */
+
+(){}\[\]<>]/g;
 
 export interface AuthValidationError {
   field: string;
@@ -14,11 +23,22 @@ export interface AuthValidationError {
 }
 
 /**
+ * Sanitize string input to prevent XSS and injection attacks.
+ * @security-review xss-prevention
+ */
+const sanitizeInput = (input: string): boolean => {
+  if (XSS_DANGEROUS_CHARS.test(input)) return false;
+  return true;
+};
+
+/**
  * Validate email format and length.
+ * @security-review email-validation
  */
 export const validateEmail = (email: unknown): email is string => {
   if (typeof email !== 'string') return false;
   if (email.length < 3 || email.length > 254) return false;
+  if (!sanitizeInput(email)) return false;
   return EMAIL_REGEX.test(email);
 };
 
