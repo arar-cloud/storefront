@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC, useState, useCallback } from "react";
+import { type FC, useState, useCallback, useMemo } from "react";
 import {
 	type AddressFragment,
 	type AddressTypeEnum,
@@ -50,6 +50,14 @@ export const AddressSelector: FC<AddressSelectorProps> = ({
 	const [, setDefaultAddress] = useUserSetDefaultAddressMutation();
 	const [isSettingDefault, setIsSettingDefault] = useState(false);
 	const [setAsDefault, setSetAsDefault] = useState(false);
+
+	// Memoize sorted addresses to avoid re-sorting on every render
+	const sortedAddresses = useMemo(
+		() => [...addresses].sort((a, b) => 
+			(a.firstName || '').localeCompare(b.firstName || '')
+		),
+		[addresses],
+	);
 
 	// Reset "set as default" checkbox when selection changes
 	const handleSelectAddress = useCallback(

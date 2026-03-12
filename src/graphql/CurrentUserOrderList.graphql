@@ -1,7 +1,13 @@
-query CurrentUserOrderList {
+query CurrentUserOrderList($first: Int = 10, $after: String) {
 	me {
 		...UserDetails
-		orders(first: 10) {
+		orders(first: $first, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+        hasPreviousPage
+        startCursor
+      }
 			edges {
 				node {
 					...OrderDetails
