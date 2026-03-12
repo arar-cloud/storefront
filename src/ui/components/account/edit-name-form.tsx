@@ -1,6 +1,15 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
+
+// XSS prevention: sanitize name inputs
+const sanitizeNameInput = (name: string): string => {
+  return name
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control chars
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .trim()
+    .slice(0, 255); // Max name length
+};
 import { Button } from "@/ui/components/ui/button";
 import { Input } from "@/ui/components/ui/input";
 import { Label } from "@/ui/components/ui/label";
@@ -22,8 +31,22 @@ export function EditNameForm({ firstName, lastName }: Props) {
 			setError("");
 			setSuccess(false);
 
+			// Sanitize name inputs before submission
+			const firstName = sanitizeNameInput(formData.get("firstName") as string || "");
+			const lastName = sanitizeNameInput(formData.get("lastName") as string || "");
+
+			// Validate field lengths
+			if (firstName.length === 0 || lastName.length === 0) {
+				setError("Name fields cannot be empty");
+				return;
+			}
+
+			const sanitizedFormData = new FormData();
+			sanitizedFormData.append("firstName", firstName);
+			sanitizedFormData.append("lastName", lastName);
+
 			startTransition(async () => {
-				const result = await updateProfile(formData);
+				const result = await updateProfile(sanitizedFormData);
 				if (!result.success) {
 					setError(result.error);
 				} else {

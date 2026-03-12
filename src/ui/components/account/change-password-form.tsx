@@ -1,6 +1,20 @@
 "use client";
 
 import { useState, useTransition, useRef, useCallback } from "react";
+
+// Input validation constants
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 128;
+
+// Validate password meets security requirements
+const isValidPassword = (password: string): boolean => {
+  return (
+    password.length >= PASSWORD_MIN_LENGTH &&
+    password.length <= PASSWORD_MAX_LENGTH &&
+    !/[\x00-\x1F\x7F]/g.test(password) && // No control chars
+    !/[<>"';]/g.test(password) // No injection chars in display
+  );
+};
 import { Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/ui/components/ui/button";
 import { Input } from "@/ui/components/ui/input";
@@ -20,6 +34,26 @@ export function ChangePasswordForm() {
 		(formData: FormData) => {
 			setError("");
 			setSuccess(false);
+
+			// Validate password inputs before submission
+			const oldPassword = formData.get("oldPassword") as string;
+			const newPassword = formData.get("newPassword") as string;
+			const confirmPassword = formData.get("confirmPassword") as string;
+
+			if (!oldPassword || !isValidPassword(oldPassword)) {
+				setError("Current password is invalid");
+				return;
+			}
+
+			if (!newPassword || !isValidPassword(newPassword)) {
+				setError("New password must be 8-128 characters and contain no control or injection characters");
+				return;
+			}
+
+			if (newPassword !== confirmPassword) {
+				setError("Passwords do not match");
+				return;
+			}
 
 			startTransition(async () => {
 				const result = await changePassword(formData);
