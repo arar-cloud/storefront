@@ -49,10 +49,22 @@ export const SignInForm: FC<SignInFormProps> = ({
 		e.preventDefault();
 		setError("");
 		setSuccessMessage("");
+
+		// Validate inputs before mutation to prevent security issues
+		if (!validateEmail(email)) {
+			setError("Please enter a valid email address");
+			return;
+		}
+
+		if (!password || password.length < 1) {
+			setError("Please enter your password");
+			return;
+		}
+
 		setIsSubmitting(true);
 
 		try {
-			const result = await signIn({ email, password });
+			const result = await signIn({ email: email.trim(), password });
 			if (result.data?.tokenCreate?.errors?.length) {
 				const err = result.data.tokenCreate.errors[0];
 				setError(err.message || "Invalid email or password");
