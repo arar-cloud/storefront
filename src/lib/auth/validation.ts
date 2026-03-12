@@ -159,6 +159,37 @@ const hasInjectionPatterns = (input: string): boolean => {
          COMMAND_INJECTION_CHARS.test(input);
 };
 
+/**
+ * Validate Authorization header format and token
+ * SECURITY: Strict token format validation to prevent header injection
+ */
+export const validateAuthHeader = (authHeader: string | undefined): AuthValidationError[] => {
+  const errors: AuthValidationError[] = [];
+  
+  if (!authHeader) {
+    errors.push({ field: 'authorization', message: 'Authorization header is required' });
+    return errors;
+  }
+  
+  // Check for header injection attempts (CRLF)
+  if (/[\r\n]/g.test(authHeader)) {
+    errors.push({ field: 'authorization', message: 'Invalid authorization header format' });
+    return errors;
+  }
+  
+  const [scheme, token] = authHeader.split(' ');
+  
+  if (scheme !== 'Bearer' && scheme !== 'bearer') {
+    errors.push({ field: 'authorization', message: 'Only Bearer tokens are supported' });
+  }
+  
+  if (!token || !TOKEN_PATTERN.test(token)) {
+    errors.push({ field: 'authorization', message: 'Invalid token format' });
+  }
+  
+  return errors;
+};
+
 export const validateResetPasswordRequest = (body: unknown): AuthValidationError[] => {
   const errors: AuthValidationError[] = [];
   if (typeof body !== 'object' || body === null) {
