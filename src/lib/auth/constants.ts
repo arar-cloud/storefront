@@ -1,7 +1,9 @@
 /**
  * Auth token configuration.
  * Shared between client and server.
+ * SECURITY: Token lifetimes are industry-standard. Review annually and adjust based on threat model.
  */
+// @security-review token-expiry-constants
 
 // Token lifetimes (industry standard for e-commerce)
 export const ACCESS_TOKEN_MAX_AGE = 15 * 60; // 15 minutes
