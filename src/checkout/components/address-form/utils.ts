@@ -15,6 +15,37 @@ import {
 } from "@/checkout/graphql";
 import { type MightNotExist } from "@/checkout/lib/global-types";
 
+/**
+ * Validate and normalize country code (ISO 3166-1 alpha-2)
+ * SECURITY: Prevent invalid country codes that could be injection vectors
+ */
+const validateCountryCode = (code: string): boolean => {
+  return /^[A-Z]{2}$/.test(code);
+};
+
+/**
+ * Validate postal code format with basic rules
+ * SECURITY: Prevent malformed postal codes and injection attempts
+ */
+const validatePostalCode = (postalCode: string, countryCode: string): boolean => {
+  // Ensure no control chars or dangerous patterns
+  if (/[\x00-\x1F\x7F<>"';]/g.test(postalCode)) return false;
+  
+  // Max length check
+  if (postalCode.length > 20) return false;
+  
+  // Country-specific rules (basic)
+  if (countryCode === 'US') {
+    return /^\d{5}(-\d{4})?$/.test(postalCode); // US ZIP format
+  } else if (countryCode === 'GB') {
+    return postalCode.length <= 8; // UK postcode max length
+  } else if (countryCode === 'CA') {
+    return /^[A-Z]\d[A-Z][ ]?\d[A-Z]\d$/.test(postalCode); // Canadian format
+  }
+  
+  return true; // Other countries: basic validation passed
+};
+
 export const getEmptyAddressFormData = (): AddressFormData => ({
 	firstName: "",
 	lastName: "",
