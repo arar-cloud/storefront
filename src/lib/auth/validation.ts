@@ -56,10 +56,9 @@ export const validateEmail = (email: unknown): email is string => {
  */
 export const validatePassword = (password: unknown): password is string => {
   if (typeof password !== 'string') return false;
-  if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) return false;
-  // Reject null bytes and control characters that could bypass further validation
-  if (/[\x00-\x1F\x7F]/.test(password)) return false;
-  if (!sanitizeInput(password)) return false; // XSS prevention
+  const sanitized = sanitizePassword(password);
+  if (hasInjectionPatterns(password)) return false;
+  if (sanitized.length < PASSWORD_MIN_LENGTH || sanitized.length > PASSWORD_MAX_LENGTH) return false;
   return true;
 };
 
@@ -105,8 +104,17 @@ export const validateAuthRegisterRequest = (body: unknown): AuthValidationError[
       errors.push({ field: 'email', message: 'Invalid email format' });
     }
   }
-  if (!validatePassword(password)) {
-    errors.push({ field: 'password', message: 'Password must be 8-128 characters' });
+  if (!password || typeof password !== 'string') {
+    errors.push({ field: 'password', message: 'Password is required and must be a string' });
+  } else {
+    const sanitized = sanitizePassword(password);
+    if (hasInjectionPatterns(password)) {
+      errors.push({ field: 'password', message: 'Password contains invalid characters' });
+    } else if (sanitized.length < PASSWORD_MIN_LENGTH) {
+      errors.push({ field: 'password', message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters` });
+    } else if (sanitized.length > PASSWORD_MAX_LENGTH) {
+      errors.push({ field: 'password', message: `Password must not exceed ${PASSWORD_MAX_LENGTH} characters` });
+    }
   }
   if (firstName !== undefined && (typeof firstName !== 'string' || firstName.length > 100)) {
     errors.push({ field: 'firstName', message: 'First name must be a string under 100 characters' });
