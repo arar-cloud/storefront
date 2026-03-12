@@ -190,6 +190,32 @@ export const validateAuthHeader = (authHeader: string | undefined): AuthValidati
   return errors;
 };
 
+/**
+ * Validate CSRF token format from request headers
+ * SECURITY: Prevent cross-site request forgery on auth endpoints
+ */
+export const validateCsrfToken = (csrfToken: string | undefined): AuthValidationError[] => {
+  const errors: AuthValidationError[] = [];
+  
+  if (!csrfToken) {
+    errors.push({ field: 'x-csrf-token', message: 'CSRF token is required' });
+    return errors;
+  }
+  
+  // Check for header injection
+  if (/[\r\n]/g.test(csrfToken)) {
+    errors.push({ field: 'x-csrf-token', message: 'Invalid CSRF token format' });
+    return errors;
+  }
+  
+  // Validate token format (32+ alphanumeric chars)
+  if (!/^[a-zA-Z0-9-_]{32,}$/.test(csrfToken)) {
+    errors.push({ field: 'x-csrf-token', message: 'CSRF token has invalid format' });
+  }
+  
+  return errors;
+};
+
 export const validateResetPasswordRequest = (body: unknown): AuthValidationError[] => {
   const errors: AuthValidationError[] = [];
   if (typeof body !== 'object' || body === null) {
