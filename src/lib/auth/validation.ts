@@ -5,19 +5,17 @@
  * @security-review input-validation-auth
  */
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// RFC 5321 compliant email validation
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 128;
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/; // JWT-like format
-// Security: XSS/Injection prevention patterns
-const XSS_DANGEROUS_CHARS = /<[^>]*>|javascript:|data:|vbscript:|onerror=|onload=|onclick=/gi;
-const SQL_INJECTION_CHARS = /['"`;\\]/g;
-const COMMAND_INJECTION_CHARS = /[&|;/**
- * Auth input validation schemas.
- * Centralized validation for all authentication endpoints.
- */
-
-(){}\[\]<>]/g;
+const NAME_MAX_LENGTH = 255;
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,}$/; // Enforce 20+ chars for tokens
+// Security: Strict XSS/Injection prevention patterns
+const XSS_DANGEROUS_CHARS = /<[^>]*>|javascript:|data:|vbscript:|onerror=|onload=|onclick=|eval\(|expression\(/gi;
+const SQL_INJECTION_CHARS = /[';"\\]/g;
+const COMMAND_INJECTION_CHARS = /[&|;`$(){}\[\]<>\\]/g;
+const CONTROL_CHARS = /[\x00-\x1F\x7F]/g;
 
 export interface AuthValidationError {
   field: string;
