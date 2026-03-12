@@ -1,6 +1,8 @@
 /**
  * Auth input validation schemas.
  * Centralized validation for all authentication endpoints.
+ * SECURITY: All validation functions return detailed errors for logging but generic messages for clients.
+ * @security-review input-validation-auth
  */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,6 +22,7 @@ const COMMAND_INJECTION_CHARS = /[&|;/**
 export interface AuthValidationError {
   field: string;
   message: string;
+  internal?: boolean; // If true, message is for logging only, use generic message for client
 }
 
 /**
@@ -31,6 +34,10 @@ const sanitizeInput = (input: string): boolean => {
   return true;
 };
 
+/**
+ * Validate email format and length.
+ * @security-review email-validation
+ */
 /**
  * Validate email format and length.
  * @security-review email-validation
@@ -47,12 +54,14 @@ export const validateEmail = (email: unknown): email is string => {
  * - Minimum 8 characters
  * - Maximum 128 characters (prevent DOS via excessively long inputs)
  * - No null bytes or control characters
+ * @security-review password-validation
  */
 export const validatePassword = (password: unknown): password is string => {
   if (typeof password !== 'string') return false;
   if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) return false;
   // Reject null bytes and control characters that could bypass further validation
   if (/[\x00-\x1F\x7F]/.test(password)) return false;
+  if (!sanitizeInput(password)) return false; // XSS prevention
   return true;
 };
 
