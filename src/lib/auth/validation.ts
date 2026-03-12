@@ -117,6 +117,33 @@ export const validateAuthRegisterRequest = (body: unknown): AuthValidationError[
 /**
  * Validate reset-password request.
  */
+/**
+ * Sanitize email input: remove control chars, trim, lowercase
+ */
+const sanitizeEmail = (email: string): string => {
+  return email
+    .trim()
+    .toLowerCase()
+    .replace(CONTROL_CHARS, '')
+    .slice(0, 254); // RFC 5321 max email length
+};
+
+/**
+ * Sanitize password input: remove null bytes and control chars
+ */
+const sanitizePassword = (password: string): string => {
+  return password.replace(CONTROL_CHARS, '').slice(0, PASSWORD_MAX_LENGTH);
+};
+
+/**
+ * Check if input contains injection patterns
+ */
+const hasInjectionPatterns = (input: string): boolean => {
+  return XSS_DANGEROUS_CHARS.test(input) || 
+         SQL_INJECTION_CHARS.test(input) || 
+         COMMAND_INJECTION_CHARS.test(input);
+};
+
 export const validateResetPasswordRequest = (body: unknown): AuthValidationError[] => {
   const errors: AuthValidationError[] = [];
   if (typeof body !== 'object' || body === null) {
