@@ -95,8 +95,15 @@ export const validateAuthRegisterRequest = (body: unknown): AuthValidationError[
 
   const { email, password, firstName, lastName, channel } = body as Record<string, unknown>;
 
-  if (!validateEmail(email)) {
-    errors.push({ field: 'email', message: 'Invalid email format' });
+  if (!email || typeof email !== 'string') {
+    errors.push({ field: 'email', message: 'Email is required and must be a string' });
+  } else {
+    const sanitized = sanitizeEmail(email);
+    if (hasInjectionPatterns(email)) {
+      errors.push({ field: 'email', message: 'Email contains invalid characters' });
+    } else if (!EMAIL_REGEX.test(sanitized)) {
+      errors.push({ field: 'email', message: 'Invalid email format' });
+    }
   }
   if (!validatePassword(password)) {
     errors.push({ field: 'password', message: 'Password must be 8-128 characters' });
