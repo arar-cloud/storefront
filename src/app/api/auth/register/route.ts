@@ -8,7 +8,70 @@ const REGISTER_MUTATION = `
         id
         email
       }
-      errors {
+      errors {{ checkTokenRateLimit, isValidTokenFormat } from '@/lib/auth/session-security';
+import { validateEmail, validateChannelId } from '@/lib/validation';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+// Security headers for API response
+const securityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get client identifier for rate limiting (IP or user agent)
+    const clientIp = request.headers.get('x-forwarded-for') ||
+                     request.headers.get('x-real-ip') ||
+                     'unknown';
+    const rateLimitKey = `register:${clientIp}`;
+
+    // Check rate limiting
+    if (!checkTokenRateLimit(rateLimitKey)) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    // Validate Content-Type
+    const contentType = request.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      return NextResponse.json(
+        { error: 'Invalid content type' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json(
+        { error: 'Invalid JSON' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    // Validate request structure
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    // Prevent prototype pollution
+    if ('__proto__' in body || 'constructor' in body || 'prototype' in body) {
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
         field
         message
         code
