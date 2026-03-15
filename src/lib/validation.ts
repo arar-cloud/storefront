@@ -170,6 +170,34 @@ export const sanitizeForDisplay = (input: string): string => {
 };
 
 /**
+ * Validate form data with injection prevention
+ * Checks for prototype pollution and dangerous patterns
+ */
+export function validateFormData(data: Record<string, unknown>): { valid: boolean; errors: ValidationError[] } {
+  const errors: ValidationError[] = [];
+  
+  if (typeof data !== 'object' || data === null) {
+    errors.push({ field: 'data', message: 'Input must be an object' });
+    return { valid: false, errors };
+  }
+  
+  // Prevent prototype pollution attacks
+  if ('__proto__' in data || 'constructor' in data || 'prototype' in data) {
+    errors.push({ field: 'data', message: 'Invalid data structure: prototype pollution detected' });
+    return { valid: false, errors };
+  }
+  
+  // Validate all string values for injection patterns
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string' && hasInjectionPatterns(value)) {
+      errors.push({ field: key, message: `Field contains potentially dangerous patterns` });
+    }
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+/**
  * Validate URL slug (no path traversal)
  */
 export const validateSlug = (slug: unknown): slug is string => {
@@ -177,5 +205,36 @@ export const validateSlug = (slug: unknown): slug is string => {
   if (slug.length === 0 || slug.length > 255) return false;
   if (PATH_TRAVERSAL_CHARS.test(slug)) return false;
   if (!/^[a-z0-9-]+$/.test(slug)) return false;
+  return true;
+};
+
+/**
+ * Validate URL format and prevent SSRF attacks
+ */
+export const validateUrl = (url: unknown): url is string => {
+  if (typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    // Prevent localhost/internal IP access
+    const hostname = parsed.hostname;
+    if (['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname)) return false;
+    if (hostname.match(/^192\.168|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Validate file path to prevent directory traversal
+ */
+export const validateFilePath = (filePath: unknown): filePath is string => {
+  if (typeof filePath !== 'string') return false;
+  if (filePath.length === 0 || filePath.length > 512) return false;
+  if (PATH_TRAVERSAL_CHARS.test(filePath)) return false;
+  if (/[<>:"|?*\x00]/.test(filePath)) return false;
+  if (filePath.startsWith('/')) return false;
   return true;
 };
