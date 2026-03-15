@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
+import { checkTokenRateLimit } from "@/lib/auth/session-security";
+
+const securityHeaders = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+};
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
@@ -26,13 +34,26 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
+	// Rate limiting by IP (brute force protection)
+	const clientIp = request.headers.get("x-forwarded-for") ||
+	             request.headers.get("x-real-ip") ||
+	             "unknown";
+	const rateLimitKey = `password-reset:${clientIp}`;
+	
+	if (!checkTokenRateLimit(rateLimitKey)) {
+		return NextResponse.json(
+			{ error: "Too many password reset attempts. Please try again later." },
+			{ status: 429, headers: securityHeaders },
+		);
+	}
+
 	const body = (await request.json()) as ResetPasswordRequest;
 	const { email, channel, redirectUrl } = body;
 
 	if (!email || !channel || !redirectUrl) {
 		return NextResponse.json(
 			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
-			{ status: 400 },
+			{ status: 400, headers: securityHeaders },
 		);
 	}
 
