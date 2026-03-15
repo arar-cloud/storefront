@@ -1,3 +1,10 @@
+// Validate country code format
+const isValidCountryCode = (code: unknown): code is string => {
+  if (typeof code !== 'string') return false;
+  // Country codes are ISO 3166-1 alpha-2: exactly 2 uppercase letters
+  return /^[A-Z]{2}$/.test(code);
+};
+
 import { isEqual, omit, pick, reduce, uniq } from "lodash-es";
 import {
 	type OptionalAddress,
@@ -162,6 +169,17 @@ export const isMatchingAddressFormData = (
 	const propsToOmit = ["id", "autoSave", "__typename"];
 
 	return isEqual(omit(address, propsToOmit), omit(addressToMatch, propsToOmit));
+};
+
+export const getCountryNameByCode = (countryCode: string) => {
+  // Validate country code before lookup
+  if (!isValidCountryCode(countryCode)) {
+    console.warn('Invalid country code attempted:', countryCode);
+    return undefined;
+  }
+  
+  // Note: countries lookup would go here
+  return undefined;
 };
 
 export const getAddressValidationRulesVariables = (
