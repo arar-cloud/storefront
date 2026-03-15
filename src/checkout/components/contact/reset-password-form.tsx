@@ -8,6 +8,7 @@ import { Button } from "@/ui/components/ui/button";
 import { Label } from "@/ui/components/ui/label";
 import { Input } from "@/ui/components/ui/input";
 import { getQueryParams, createQueryString } from "@/checkout/lib/utils/url";
+import { validateResetToken, validatePasswordChange } from "@/checkout/lib/validation";
 
 export interface ResetPasswordFormProps {
 	/** Called when password reset is successful */
@@ -43,20 +44,19 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ onSuccess, onBac
 		e.preventDefault();
 		setError("");
 
-		if (password.length < 8) {
-			setError("Password must be at least 8 characters");
-			return;
-		}
-
-		if (password !== confirmPassword) {
-			setError("Passwords do not match");
-			return;
-		}
-
 		const { passwordResetToken, passwordResetEmail } = getQueryParams(searchParams);
 
-		if (!passwordResetToken) {
+		// Validate reset token format and integrity
+		const tokenValidation = validateResetToken(passwordResetToken);
+		if (!tokenValidation.valid) {
 			setError("Invalid or expired reset link");
+			return;
+		}
+
+		// Validate password strength and confirmation
+		const passwordValidation = validatePasswordChange(password, confirmPassword);
+		if (!passwordValidation.valid) {
+			setError(passwordValidation.errors?.[0] || "Password validation failed");
 			return;
 		}
 
