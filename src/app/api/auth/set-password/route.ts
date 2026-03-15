@@ -7,7 +7,86 @@ const SET_PASSWORD_MUTATION = `
     setPassword(email: $email, token: $token, password: $password) {
       token
       refreshToken
-      errors {
+      errors {{ checkTokenRateLimit, isValidTokenFormat } from '@/lib/auth/session-security';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+const securityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    // Rate limiting by IP
+    const clientIp = request.headers.get('x-forwarded-for') ||
+                     request.headers.get('x-real-ip') ||
+                     'unknown';
+    const rateLimitKey = `set-password:${clientIp}`;
+
+    if (!checkTokenRateLimit(rateLimitKey)) {
+      return NextResponse.json(
+        { error: 'Too many password change attempts. Please try again later.' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
+    // Validate Content-Type
+    const contentType = request.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      return NextResponse.json(
+        { error: 'Invalid content type' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json(
+        { error: 'Invalid JSON' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    // Validate request structure
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    // Prevent prototype pollution
+    if ('__proto__' in body || 'constructor' in body || 'prototype' in body) {
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    // Validate token format before processing
+    const { token } = body as { token?: unknown };
+    if (!isValidTokenFormat(token)) {
+      return NextResponse.json(
+        { error: 'Invalid or expired token' },
+        { status: 400, headers: securityHeaders }
+      );
+    }
+
+    // Rate limit by token to prevent token reuse/replay attacks
+    const tokenLimitKey = `token:${String(token).substring(0, 20)}`;
+    if (!checkTokenRateLimit(tokenLimitKey)) {
+      return NextResponse.json(
+        { error: 'This token has been used too many times' },
+        { status: 429, headers: securityHeaders }
+      );
+    }
+
         field
         message
         code
