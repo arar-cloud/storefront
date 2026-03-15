@@ -6,6 +6,7 @@ import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
 import { Button } from "@/ui/components/ui/button";
 import { Input } from "@/ui/components/ui/input";
 import { useRequestPasswordResetMutation } from "@/checkout/graphql";
+import { validateAuthCredentials } from "../../../lib/validation";
 
 export interface SignInFormProps {
 	/** Pre-filled email address */
@@ -49,6 +50,16 @@ export const SignInForm: FC<SignInFormProps> = ({
 		e.preventDefault();
 		setError("");
 		setSuccessMessage("");
+		
+		// Validate input before sending
+		const validation = validateAuthCredentials(email, password);
+		if (!validation.valid) {
+			// Log validation errors but don't expose to user
+			console.error('Sign-in validation failed:', validation.errors);
+			setError("Invalid email or password");
+			return;
+		}
+		
 		setIsSubmitting(true);
 
 		try {
