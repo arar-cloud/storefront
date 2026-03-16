@@ -1,3 +1,7 @@
+/**
+ * Safely extracts and validates URL parameter
+ * Prevents injection attacks by validating format and length
+ */
 import { type CountryCode } from "@/checkout/graphql";
 import { type MightNotExist } from "@/checkout/lib/global-types";
 import { type ReadonlyURLSearchParams } from "next/navigation";
@@ -94,6 +98,29 @@ export const createQueryString = (
  * Extract checkout ID from params.
  * Returns null if on order confirmation page.
  */
+/**
+ * Safely extracts and validates URL parameter
+ * Prevents injection attacks by validating format and length
+ */
+export const getUrlParam = (param: string | string[] | undefined): string | null => {
+	if (!param) return null;
+
+	if (Array.isArray(param)) {
+		// Only use first element, prevent param pollution
+		const value = param[0];
+		if (typeof value !== 'string' || value.length > 1024) {
+			return null;
+		}
+		return value;
+	}
+
+	// Validate string parameter
+	if (typeof param !== 'string' || param.length > 1024) {
+		return null;
+	}
+	return param;
+};
+
 export const extractCheckoutIdFromParams = (params: QueryParams): string | null => {
 	if (params.orderId) {
 		return null;
