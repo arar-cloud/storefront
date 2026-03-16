@@ -1,11 +1,13 @@
 "use client";
 
-import { type FC } from "react";
+import { type FC, memo } from "react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
 
 export interface SignedInUserProps {
 	/** User email or basic info */
-	user: { email: string };
+	user: { email: string });
+
+SignedInUser.displayName = 'SignedInUser';
 	/** Called after sign-out */
 	onSignOut: () => void;
 }
@@ -19,7 +21,7 @@ export interface SignedInUserProps {
  * - "Signed in" status
  * - Sign out button
  */
-export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut }) => {
+export const SignedInUser: FC<SignedInUserProps> = memo(({ user, onSignOut }) => {
 	const { signOut } = useSaleorAuthContext();
 
 	const handleSignOut = () => {
