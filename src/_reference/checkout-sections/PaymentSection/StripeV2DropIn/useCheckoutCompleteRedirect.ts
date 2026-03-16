@@ -27,12 +27,10 @@ export const useCheckoutCompleteRedirect = () => {
 			return;
 		}
 
-		const transactionId = sessionStorage.getItem("transactionId");
 		const transactionIdFromQuery = typeof transaction === "string" ? transaction : undefined;
-		const resolvedTransactionId = transactionId ?? transactionIdFromQuery;
 
-		if (!resolvedTransactionId) {
-			console.error("Missing transactionId in sessionStorage and query params after Stripe redirect", {
+		if (!transactionIdFromQuery) {
+			console.error("Missing transactionId in query params after Stripe redirect", {
 				transaction,
 			});
 			return;
@@ -43,7 +41,7 @@ export const useCheckoutCompleteRedirect = () => {
 		const processAndComplete = async () => {
 			try {
 				// First, sync Saleor with Stripe's payment status via transactionProcess
-				const processResult = await transactionProcess({ id: resolvedTransactionId });
+				const processResult = await transactionProcess({ id: transactionIdFromQuery });
 
 				if (processResult.error) {
 					console.error("Transaction process failed:", processResult.error);
@@ -81,7 +79,7 @@ export const useCheckoutCompleteRedirect = () => {
 				}
 
 				// Clear transaction identifier once we finalize
-				sessionStorage.removeItem("transactionId");
+				// Session storage cleared by browser on navigation
 
 				// Now complete the checkout
 				await onCheckoutComplete();
