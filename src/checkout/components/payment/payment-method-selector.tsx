@@ -50,7 +50,7 @@ export interface PaymentMethodSelectorProps {
  * />
  * ```
  */
-export const PaymentMethodSelector: FC<PaymentMethodSelectorProps> = ({
+export const PaymentMethodSelector = React.memo: FC<PaymentMethodSelectorProps> = ({
 	value,
 	onChange,
 	cardData,
