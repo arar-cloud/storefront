@@ -1,3 +1,24 @@
+const navLinksCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 10;
+
+const getCachedNavLinks = async (channel: string) => {
+  const cacheKey = `nav-${channel}`;
+  const cached = navLinksCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  // Clear cache if size exceeded
+  if (navLinksCache.size > MAX_CACHE_SIZE) {
+    const firstKey = navLinksCache.keys().next().value;
+    if (firstKey) navLinksCache.delete(firstKey);
+  }
+
+  return null;
+};
+
 import Link from "next/link";
 import { cacheLife, cacheTag } from "next/cache";
 import { NavLink } from "./nav-link";
