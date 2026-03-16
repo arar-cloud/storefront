@@ -342,37 +342,38 @@ async function executeGraphQL<Result, Variables>(
 	};
 
 	const requestPromise = (async () => {
-		const fetchResult = await requestQueue.enqueue(() =>
-			fetchWithRetry(input, withAuth, operationName, variablesForLog),
-		);
+		try {
+			const fetchResult = await requestQueue.enqueue(() =>
+				fetchWithRetry(input, withAuth, operationName, variablesForLog),
+			);
 
-		if (!fetchResult.ok) {
-			return fetchResult;
+			if (!fetchResult.ok) {
+				return fetchResult;
+			}
+
+			const response = fetchResult.data;
+
+			if (!response.ok) {
+				const body = await response.text().catch(() => "");
+				return httpError(response.status, `HTTP ${response.status}: ${response.statusText}\n${body}`);
+			}
+
+			const body = (await response.json()) as GraphQLResponse<Result>;
+
+			if ("errors" in body) {
+				return graphqlError(body.errors.map((e) => e.message));
+			}
+
+			return success(body.data);
+		} finally {
+			// Clean up in-flight request tracking to prevent memory leaks
+			inFlightRequests.delete(requestKey);
 		}
-
-		const response = fetchResult.data;
-
-		if (!response.ok) {
-			const body = await response.text().catch(() => "");
-			return httpError(response.status, `HTTP ${response.status}: ${response.statusText}\n${body}`);
-		}
-
-		const body = (await response.json()) as GraphQLResponse<Result>;
-
-		if ("errors" in body) {
-			return graphqlError(body.errors.map((e) => e.message));
-		}
-
-		return success(body.data);
 	})();
 	
 	// Store promise for deduplication
 	inFlightRequests.set(requestKey, requestPromise as Promise<GraphQLResult<Result>>);
-	
-	// Clean up after request completes
-	const result = await requestPromise;
-	inFlightRequests.delete(requestKey);
-	return result;
+	return requestPromise;
 }
 
 /**
