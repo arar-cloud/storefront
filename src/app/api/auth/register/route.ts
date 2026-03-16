@@ -34,6 +34,14 @@ interface AccountRegisterResult {
 }
 
 export async function POST(request: NextRequest) {
+	// Validate required environment variables
+	if (!process.env.NEXTAUTH_URL) {
+		return NextResponse.json(
+			{ error: "Server configuration error: NEXTAUTH_URL not set" },
+			{ status: 500 },
+		);
+	}
+
 	const body = (await request.json()) as RegisterRequest;
 	const { email, password, firstName, lastName, channel, redirectUrl } = body;
 
