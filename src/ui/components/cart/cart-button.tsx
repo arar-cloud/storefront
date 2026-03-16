@@ -2,6 +2,15 @@
 
 import { ShoppingBagIcon } from "lucide-react";
 import { useCart } from "./cart-context";
+import dynamic from "next/dynamic";
+
+const LazyCartButton = dynamic(
+  async () => {
+    const { CartButton: Button } = await import("./cart-button-lazy");
+    return Button;
+  },
+  { loading: () => <div className="skeleton" />, ssr: false }
+);
 
 interface CartButtonProps {
 	itemCount: number;
