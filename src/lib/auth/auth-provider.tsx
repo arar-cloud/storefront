@@ -44,17 +44,19 @@ const createClientCookieStorage = () => {
 		},
 		setItem: (key: string, value: string): void => {
 			if (typeof document === "undefined") return;
+			// Sanitize value to prevent cookie injection attacks
+			if (!value || typeof value !== 'string') return;
 			const cookieName = encodeCookieName(key);
 			const maxAge = key.includes("refresh") ? REFRESH_TOKEN_MAX_AGE : ACCESS_TOKEN_MAX_AGE;
 			const securePart = isSecure ? "; Secure" : "";
 			document.cookie = `${cookieName}=${encodeURIComponent(
 				value,
-			)}; path=/; max-age=${maxAge}; SameSite=Lax${securePart}`;
+			)}; path=/; max-age=${maxAge}; SameSite=Strict${securePart}`;
 		},
 		removeItem: (key: string): void => {
 			if (typeof document === "undefined") return;
 			const cookieName = encodeCookieName(key);
-			document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax`;
+			document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Strict`;
 		},
 	};
 };
