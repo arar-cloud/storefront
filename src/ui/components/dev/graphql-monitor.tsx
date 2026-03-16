@@ -63,8 +63,19 @@ let totalErrors = 0;
 let totalRetries = 0;
 
 // Track recent failed operations for retry detection
+// Use bounded cache to prevent unbounded memory growth
+const MAX_FAILED_OPS_SIZE = 100;
 const recentFailedOps = new Map<string, { timestamp: number; count: number }>();
 const RETRY_WINDOW_MS = 5000; // Consider it a retry if same operation fails within 5s
+
+// Helper to enforce bounded cache size with FIFO eviction
+function addToRecentFailedOps(operation: string, data: { timestamp: number; count: number }) {
+	recentFailedOps.set(operation, data);
+	if (recentFailedOps.size > MAX_FAILED_OPS_SIZE) {
+		const firstKey = recentFailedOps.keys().next().value;
+		if (firstKey) recentFailedOps.delete(firstKey);
+	}
+}
 
 // Thresholds for alerts
 const RATE_ALERT_THRESHOLD = 5; // requests/second
@@ -146,7 +157,8 @@ export function logGraphQLRequest(log: RequestLog) {
 		requestLogs.shift();
 	}
 
-	// Update operation stats
+	// Update operation stats with bounded cache
+	const MAX_OPERATION_STATS = 500;
 	const stats = operationStats.get(log.operation) || {
 		count: 0,
 		errors: 0,
@@ -162,6 +174,11 @@ export function logGraphQLRequest(log: RequestLog) {
 	}
 	stats.lastSeen = log.timestamp;
 	operationStats.set(log.operation, stats);
+	// Enforce bounded cache to prevent memory leak
+	if (operationStats.size > MAX_OPERATION_STATS) {
+		const firstKey = operationStats.keys().next().value;
+		if (firstKey) operationStats.delete(firstKey);
+	}
 
 	// Dispatch custom event for React components to listen to
 	window.dispatchEvent(new CustomEvent("graphql-request", { detail: enrichedLog }));
