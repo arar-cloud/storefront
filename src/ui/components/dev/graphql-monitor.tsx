@@ -180,6 +180,12 @@ export function logGraphQLRequest(log: RequestLog) {
 		if (firstKey) operationStats.delete(firstKey);
 	}
 
+	// Enforce cache size limits on failed operations to prevent unbounded growth
+	if (recentFailedOps.size > MAX_FAILED_OPS_SIZE) {
+		const firstFailedKey = recentFailedOps.keys().next().value;
+		if (firstFailedKey) recentFailedOps.delete(firstFailedKey);
+	}
+
 	// Dispatch custom event for React components to listen to
 	window.dispatchEvent(new CustomEvent("graphql-request", { detail: enrichedLog }));
 }
