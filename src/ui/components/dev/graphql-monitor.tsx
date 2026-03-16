@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Activity, AlertTriangle, X, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
@@ -348,7 +348,10 @@ export function GraphQLMonitor() {
 
 		const updateStats = () => {
 			const rate = calculateRate();
-			const sortedOps = Array.from(operationStats.entries()).sort((a, b) => b[1].count - a[1].count);
+			const sortedOps = useMemo(
+				() => Array.from(operationStats.entries()).sort((a, b) => b[1].count - a[1].count),
+				[],
+			);
 
 			setStats({
 				total: totalRequests,
