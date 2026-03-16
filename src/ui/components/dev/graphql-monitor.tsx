@@ -300,6 +300,22 @@ export function createMonitoredFetch(originalFetch: FetchFn, source?: RequestSou
 export function GraphQLMonitor() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
+	const listenerRefRef = useRef<(() => void)[]>([]);
+	
+	useEffect(() => {
+		return () => {
+			// Cleanup all stored listeners on unmount
+			listenerRefRef.current.forEach(unsubscribe => {
+				try {
+					unsubscribe();
+				} catch (e) {
+					console.error('Error unsubscribing listener:', e);
+				}
+			});
+			listenerRefRef.current = [];
+		};
+	}, []);
+	
 	const [stats, setStats] = useState({
 		total: 0,
 		errors: 0,
@@ -363,9 +379,11 @@ export function GraphQLMonitor() {
 		// Listen for new requests
 		const handleRequest = () => updateStats();
 		window.addEventListener("graphql-request", handleRequest);
+		listenerRefRef.current.push(() => window.removeEventListener("graphql-request", handleRequest));
 
 		// Periodic update for rate decay
 		const interval = setInterval(updateStats, 1000);
+		listenerRefRef.current.push(() => clearInterval(interval));
 
 		// Cleanup: remove event listener and clear interval on unmount
 		return () => {
