@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState, createContext, useContext } from "react";
+import { type ReactNode, useState, createContext, useContext, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { Logo } from "../../logo";
 import {
@@ -17,6 +17,17 @@ const MobileMenuContext = createContext<{ close: () => void } | null>(null);
 
 export const useMobileMenuClose = () => {
 	const context = useContext(MobileMenuContext);
+	
+	useEffect(() => {
+		return () => {
+			// Cleanup: Remove any attached event listeners on unmount
+			if (context?.close) {
+				document.removeEventListener('click', context.close as any);
+				document.removeEventListener('keydown', context.close as any);
+			}
+		};
+	}, [context]);
+	
 	return context?.close ?? (() => {});
 };
 
