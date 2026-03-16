@@ -344,6 +344,7 @@ export function GraphQLMonitor() {
 		// Periodic update for rate decay
 		const interval = setInterval(updateStats, 1000);
 
+		// Cleanup: remove event listener and clear interval on unmount
 		return () => {
 			window.removeEventListener("graphql-request", handleRequest);
 			clearInterval(interval);
