@@ -20,6 +20,10 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 	// Log error for debugging (server-side in production)
 	useEffect(() => {
 		console.error("[Error Page]", error);
+		// Cleanup hook to prevent memory leaks
+		return () => {
+			// No cleanup needed for console.error, but structure enables adding event listeners/timers safely
+		};
 	}, [error]);
 
 	// Extract error info
