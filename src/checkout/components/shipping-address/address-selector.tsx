@@ -56,12 +56,16 @@ export const AddressSelector: FC<AddressSelectorProps> = ({
 	const addressMap = new Map(addresses.map((addr) => [addr.id, addr]));
 
 	// Reset "set as default" checkbox when selection changes
+	// Optimized address lookup using Map instead of nested loops for O(1) performance
 	const handleSelectAddress = useCallback(
 		(id: string) => {
-			onSelectAddress(id);
-			setSetAsDefault(false);
+			const selectedAddress = addressMap.get(id);
+			if (selectedAddress) {
+				onSelectAddress(id);
+				setSetAsDefault(false);
+			}
 		},
-		[onSelectAddress],
+		[onSelectAddress, addressMap],
 	);
 
 	// Handle the "set as default" checkbox change
