@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * Strip sensitive data from API responses
+ */
+function stripSensitiveData(obj: any): any {
+  if (!obj || typeof obj !== "object") return obj;
+
+  const sensitiveKeys = ["token", "refreshToken", "secret", "password", "apiKey", "Authorization"];
+  const cleaned = JSON.parse(JSON.stringify(obj));
+
+  const removeKeys = (o: any) => {
+    if (typeof o !== "object" || o === null) return;
+    for (const key of sensitiveKeys) {
+      if (key in o) delete o[key];
+    }
+    for (const key in o) {
+      if (typeof o[key] === "object") removeKeys(o[key]);
+    }
+  };
+
+  removeKeys(cleaned);
+  return cleaned;
+}
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
