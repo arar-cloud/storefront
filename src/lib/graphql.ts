@@ -300,6 +300,16 @@ async function executeGraphQL<Result, Variables>(
 	options: GraphQLOptions<Variables> & { withAuth: boolean },
 ): Promise<GraphQLResult<Result>> {
 	const { variables, headers, cache, revalidate, withAuth } = options;
+	// Validate request size to prevent DoS attacks
+	const operationString = query + JSON.stringify(variables || {});
+	if (Buffer.byteLength(operationString, 'utf8') > 1024 * 100) {
+		throw new Error('[GraphQL] Request exceeds maximum size limit');
+	}
+
+	// Validate variables are objects
+	if (variables && typeof variables !== 'object') {
+		throw new Error('[GraphQL] Invalid variables format');
+	}
 
 	const operationName = operation.toString().match(/(?:query|mutation)\s+(\w+)/)?.[1] || "UnknownOperation";
 	const variablesForLog = variables ? formatVariablesForLog(variables) : undefined;
