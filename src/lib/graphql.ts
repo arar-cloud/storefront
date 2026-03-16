@@ -1,3 +1,6 @@
+// Request deduplication: track in-flight requests to prevent N+1
+const inFlightRequests = new Map<string, Promise<GraphQLResult<any>>>();
+
 import { type TypedDocumentString } from "../gql/graphql";
 
 // ============================================================================
