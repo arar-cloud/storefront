@@ -1,4 +1,4 @@
-import { type FormEventHandler, useState } from "react";
+import { type FormEventHandler, useState, useEffect } from "react";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { type StripePaymentElementOptions } from "@stripe/stripe-js";
 import { getUrlForTransactionInitialize } from "../utils";
@@ -29,6 +29,14 @@ export function CheckoutForm() {
 
 	// When page is opened from previously redirected payment, we need to complete the checkout
 	useCheckoutCompleteRedirect();
+
+	// Cleanup effect to prevent memory leaks
+	useEffect(() => {
+		return () => {
+			// Clear loading state on component unmount
+			setIsLoading(false);
+		};
+	}, []);
 
 	const handleSubmit: FormEventHandler<HTMLFormElement> = useEvent(async (e) => {
 		e.preventDefault();
