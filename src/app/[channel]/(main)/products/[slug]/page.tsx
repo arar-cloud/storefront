@@ -117,6 +117,7 @@ async function ProductContent({
 		notFound();
 	}
 
+	// Variants are already fetched and cached via getProductData
 	const variants = product.variants || [];
 	const selectedVariantId = searchParams.variant || (variants.length === 1 ? variants[0].id : undefined);
 	const selectedVariant = variants.find((v) => v.id === selectedVariantId);

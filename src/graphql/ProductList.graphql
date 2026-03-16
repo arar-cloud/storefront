@@ -1,4 +1,5 @@
-query ProductList($first: Int = 9, $channel: String!) {
+query ProductList($first: Int = 20, $after: String) {
+  products(first: $first, after: $after)($first: Int = 9, $channel: String!) {
 	products(first: $first, channel: $channel) {
 		edges {
 			node {

@@ -1,3 +1,6 @@
+// Cache checkout queries to prevent N+1 API calls on re-render
+const checkoutCache = new Map();
+
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC } from "react";
+import { type FC, useMemo } from "react";
 import { type AddressFragment } from "@/checkout/graphql";
 import { cn } from "@/lib/utils";
 

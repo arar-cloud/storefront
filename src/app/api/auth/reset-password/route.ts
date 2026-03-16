@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * Strip sensitive data from API responses
+ */
+function stripSensitiveData(obj: any): any {
+  if (!obj || typeof obj !== "object") return obj;
+
+  const sensitiveKeys = ["token", "refreshToken", "secret", "password", "apiKey", "Authorization"];
+  const cleaned = JSON.parse(JSON.stringify(obj));
+
+  const removeKeys = (o: any) => {
+    if (typeof o !== "object" || o === null) return;
+    for (const key of sensitiveKeys) {
+      if (key in o) delete o[key];
+    }
+    for (const key in o) {
+      if (typeof o[key] === "object") removeKeys(o[key]);
+    }
+  };
+
+  removeKeys(cleaned);
+  return cleaned;
+}
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
@@ -26,6 +49,14 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
+	// Validate required environment variables
+	if (!process.env.NEXTAUTH_URL) {
+		return NextResponse.json(
+			{ error: "Server configuration error: NEXTAUTH_URL not set" },
+			{ status: 500 },
+		);
+	}
+
 	const body = (await request.json()) as ResetPasswordRequest;
 	const { email, channel, redirectUrl } = body;
 

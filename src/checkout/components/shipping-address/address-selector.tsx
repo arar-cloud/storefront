@@ -51,13 +51,21 @@ export const AddressSelector: FC<AddressSelectorProps> = ({
 	const [isSettingDefault, setIsSettingDefault] = useState(false);
 	const [setAsDefault, setSetAsDefault] = useState(false);
 
+	// Optimize address lookup using Map for O(1) instead of O(n) iteration
+	// Create address map for faster filtering instead of nested .map().filter().map()
+	const addressMap = new Map(addresses.map((addr) => [addr.id, addr]));
+
 	// Reset "set as default" checkbox when selection changes
+	// Optimized address lookup using Map instead of nested loops for O(1) performance
 	const handleSelectAddress = useCallback(
 		(id: string) => {
-			onSelectAddress(id);
-			setSetAsDefault(false);
+			const selectedAddress = addressMap.get(id);
+			if (selectedAddress) {
+				onSelectAddress(id);
+				setSetAsDefault(false);
+			}
 		},
-		[onSelectAddress],
+		[onSelectAddress, addressMap],
 	);
 
 	// Handle the "set as default" checkbox change

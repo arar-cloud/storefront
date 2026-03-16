@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, memo } from "react";
 import { FilterBar, ProductGrid, useProductFilters, type ProductCardData } from "@/ui/components/plp";
 import { Pagination } from "@/ui/components/pagination";
 
@@ -26,7 +26,7 @@ function PaginationSkeleton() {
 	);
 }
 
-export function ProductsPageClient({ products, pageInfo, resolvedCategories = [] }: ProductsPageClientProps) {
+export const ProductsPageClient = memo(function ProductsPageClient({ products, pageInfo, resolvedCategories = [] }: ProductsPageClientProps) {
 	const {
 		filteredProducts,
 		categoryOptions,

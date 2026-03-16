@@ -19,6 +19,7 @@ export const useCustomerAttach = () => {
 	const checkoutUserId = checkout?.user?.id;
 
 	// Skip if: already has user, not authenticated, still loading, or no checkout
+	// Dependencies: all values referenced in shouldSkip or mutation logic must be in deps array
 	const shouldSkip = !!checkoutUserId || !authenticated || fetchingCheckout || fetching || !checkoutId;
 
 	useSafeMutationOnce(

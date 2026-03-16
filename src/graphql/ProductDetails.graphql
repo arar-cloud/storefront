@@ -1,5 +1,5 @@
 query ProductDetails($slug: String!, $channel: String!) {
-	product(slug: $slug, channel: $channel) {
+	product(slug: $slug, channel: $channel, channel: $channel) {
 		id
 		name
 		slug
