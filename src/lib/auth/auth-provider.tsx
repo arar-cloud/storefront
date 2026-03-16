@@ -73,11 +73,28 @@ const makeUrqlClient = () => {
 	const authFetch = (input: RequestInfo | URL, init?: RequestInit) =>
 		saleorAuthClient.fetchWithAuth(input as NodeJS.fetch.RequestInfo, init);
 
+	const requestCache = new Map<string, Promise<Response>>();
+	const MAX_CACHE_SIZE = 50;
+
+	const cachedAuthFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+		const cacheKey = `${input}${JSON.stringify(init || {})}`;
+		if (requestCache.has(cacheKey)) {
+			return requestCache.get(cacheKey)!;
+		}
+		const request = authFetch(input, init);
+		requestCache.set(cacheKey, request);
+		if (requestCache.size > MAX_CACHE_SIZE) {
+			const firstKey = requestCache.keys().next().value;
+			if (firstKey) requestCache.delete(firstKey);
+		}
+		return request;
+	};
+
 	return createClient({
 		url: saleorApiUrl,
 		suspense: true,
 		requestPolicy: "cache-first",
-		fetch: withRetry(authFetch) as typeof fetch,
+		fetch: withRetry(cachedAuthFetch) as typeof fetch,
 		exchanges: [dedupExchange, cacheExchange, fetchExchange],
 	});
 };
