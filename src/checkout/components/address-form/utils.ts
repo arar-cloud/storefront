@@ -211,3 +211,33 @@ export const getFilteredAddressFields = (addressFields: ApiAddressField[]): Addr
 
 	return uniq([...filteredAddressFields, "firstName", "lastName", "phone"]);
 };
+
+// Input validation constants for security hardening
+const FIELD_MAX_LENGTHS = {
+	firstName: 50,
+	lastName: 50,
+	companyName: 100,
+	streetAddress1: 100,
+	streetAddress2: 100,
+	city: 50,
+	postalCode: 20,
+	countryCode: 2,
+	cityArea: 50,
+	countryArea: 50,
+	phone: 30,
+};
+
+export const validateAddressFieldLength = (field: string, value: string): boolean => {
+	const maxLength = FIELD_MAX_LENGTHS[field as keyof typeof FIELD_MAX_LENGTHS];
+	if (maxLength && value.length > maxLength) {
+		return false;
+	}
+	return true;
+};
+
+export const sanitizeAddressField = (value: string): string => {
+	return value
+		.trim()
+		.replace(/[<>"'%;()&+\x00-\x1F]/g, '') // Remove dangerous characters
+		.slice(0, 100); // Enforce reasonable limit
+};
