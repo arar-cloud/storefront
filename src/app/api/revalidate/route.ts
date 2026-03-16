@@ -176,13 +176,21 @@ export async function POST(request: NextRequest) {
 	// Get raw body for signature verification
 	const rawBody = await request.text();
 
-	// Verify Saleor webhook signature
+	// Verify Saleor webhook signature with strict validation
 	const signature = request.headers.get("saleor-signature");
 
 	if (!verifyWebhookSignature(rawBody, signature)) {
 		// Fallback to static secret for manual testing
 		const staticSecret = request.headers.get("x-revalidate-secret");
-		if (staticSecret !== process.env.REVALIDATE_SECRET || !process.env.REVALIDATE_SECRET) {
+		// SECURITY: Prevent token bypass - validate token format and length
+		if (
+			!process.env.REVALIDATE_SECRET ||
+			!staticSecret ||
+			typeof staticSecret !== "string" ||
+			staticSecret.length > 256 ||
+			staticSecret !== process.env.REVALIDATE_SECRET ||
+			!/^[a-zA-Z0-9_\-+/=]+$/.test(staticSecret)
+		) {
 			console.warn("[Revalidate] Invalid signature or secret");
 			return Response.json({ error: "Unauthorized" }, { status: 401 });
 		}
@@ -315,7 +323,15 @@ export async function GET(request: NextRequest) {
 	const searchParams = request.nextUrl.searchParams;
 	const secret = searchParams.get("secret");
 
-	if (!process.env.REVALIDATE_SECRET || secret !== process.env.REVALIDATE_SECRET) {
+	// SECURITY: Strict token validation - reject malformed or oversized tokens
+	if (
+		!process.env.REVALIDATE_SECRET ||
+		!secret ||
+		typeof secret !== "string" ||
+		secret.length > 256 ||
+		secret !== process.env.REVALIDATE_SECRET ||
+		!/^[a-zA-Z0-9_\-+/=]+$/.test(secret)
+	) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 

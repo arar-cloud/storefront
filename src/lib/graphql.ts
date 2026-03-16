@@ -1,3 +1,6 @@
+// Request deduplication: track in-flight requests to prevent N+1
+const inFlightRequests = new Map<string, Promise<GraphQLResult<any>>>();
+
 import { type TypedDocumentString } from "../gql/graphql";
 
 // ============================================================================
@@ -300,6 +303,23 @@ async function executeGraphQL<Result, Variables>(
 	options: GraphQLOptions<Variables> & { withAuth: boolean },
 ): Promise<GraphQLResult<Result>> {
 	const { variables, headers, cache, revalidate, withAuth } = options;
+	
+	// Request deduplication: create stable key for in-flight tracking
+	const requestKey = `${operation.toString()}:${JSON.stringify(variables || {})}`;
+	if (inFlightRequests.has(requestKey)) {
+		return inFlightRequests.get(requestKey) as Promise<GraphQLResult<Result>>;
+	}
+	
+	// Validate request size to prevent DoS attacks
+	const operationString = operation.toString() + JSON.stringify(variables || {});
+	if (Buffer.byteLength(operationString, 'utf8') > 1024 * 100) {
+		throw new Error('[GraphQL] Request exceeds maximum size limit');
+	}
+
+	// Validate variables are objects
+	if (variables && typeof variables !== 'object') {
+		throw new Error('[GraphQL] Invalid variables format');
+	}
 
 	const operationName = operation.toString().match(/(?:query|mutation)\s+(\w+)/)?.[1] || "UnknownOperation";
 	const variablesForLog = variables ? formatVariablesForLog(variables) : undefined;
@@ -321,28 +341,39 @@ async function executeGraphQL<Result, Variables>(
 		next: { revalidate },
 	};
 
-	const fetchResult = await requestQueue.enqueue(() =>
-		fetchWithRetry(input, withAuth, operationName, variablesForLog),
-	);
+	const requestPromise = (async () => {
+		try {
+			const fetchResult = await requestQueue.enqueue(() =>
+				fetchWithRetry(input, withAuth, operationName, variablesForLog),
+			);
 
-	if (!fetchResult.ok) {
-		return fetchResult;
-	}
+			if (!fetchResult.ok) {
+				return fetchResult;
+			}
 
-	const response = fetchResult.data;
+			const response = fetchResult.data;
 
-	if (!response.ok) {
-		const body = await response.text().catch(() => "");
-		return httpError(response.status, `HTTP ${response.status}: ${response.statusText}\n${body}`);
-	}
+			if (!response.ok) {
+				const body = await response.text().catch(() => "");
+				return httpError(response.status, `HTTP ${response.status}: ${response.statusText}\n${body}`);
+			}
 
-	const body = (await response.json()) as GraphQLResponse<Result>;
+			const body = (await response.json()) as GraphQLResponse<Result>;
 
-	if ("errors" in body) {
-		return graphqlError(body.errors.map((e) => e.message));
-	}
+			if ("errors" in body) {
+				return graphqlError(body.errors.map((e) => e.message));
+			}
 
-	return success(body.data);
+			return success(body.data);
+		} finally {
+			// Clean up in-flight request tracking to prevent memory leaks
+			inFlightRequests.delete(requestKey);
+		}
+	})();
+	
+	// Store promise for deduplication
+	inFlightRequests.set(requestKey, requestPromise as Promise<GraphQLResult<Result>>);
+	return requestPromise;
 }
 
 /**

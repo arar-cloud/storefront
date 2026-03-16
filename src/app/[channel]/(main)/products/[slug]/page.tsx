@@ -299,7 +299,12 @@ function getGalleryImages(
 	}
 
 	if (product.media && product.media.length > 0) {
-		return product.media.filter((m) => m.type === "IMAGE").map((m) => ({ url: m.url, alt: m.alt }));
+		return product.media.reduce((acc, m) => {
+		  if (m.type === "IMAGE") {
+		    acc.push({ url: m.url, alt: m.alt });
+		  }
+		  return acc;
+		}, [] as { url: string; alt: string | null | undefined }[]);
 	}
 
 	if (product.thumbnail) {

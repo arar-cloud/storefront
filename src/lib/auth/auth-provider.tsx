@@ -44,17 +44,19 @@ const createClientCookieStorage = () => {
 		},
 		setItem: (key: string, value: string): void => {
 			if (typeof document === "undefined") return;
+			// Sanitize value to prevent cookie injection attacks
+			if (!value || typeof value !== 'string') return;
 			const cookieName = encodeCookieName(key);
 			const maxAge = key.includes("refresh") ? REFRESH_TOKEN_MAX_AGE : ACCESS_TOKEN_MAX_AGE;
 			const securePart = isSecure ? "; Secure" : "";
 			document.cookie = `${cookieName}=${encodeURIComponent(
 				value,
-			)}; path=/; max-age=${maxAge}; SameSite=Lax${securePart}`;
+			)}; path=/; max-age=${maxAge}; SameSite=Strict${securePart}`;
 		},
 		removeItem: (key: string): void => {
 			if (typeof document === "undefined") return;
 			const cookieName = encodeCookieName(key);
-			document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax`;
+			document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Strict`;
 		},
 	};
 };
@@ -71,11 +73,28 @@ const makeUrqlClient = () => {
 	const authFetch = (input: RequestInfo | URL, init?: RequestInit) =>
 		saleorAuthClient.fetchWithAuth(input as NodeJS.fetch.RequestInfo, init);
 
+	const requestCache = new Map<string, Promise<Response>>();
+	const MAX_CACHE_SIZE = 50;
+
+	const cachedAuthFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+		const cacheKey = `${input}${JSON.stringify(init || {})}`;
+		if (requestCache.has(cacheKey)) {
+			return requestCache.get(cacheKey)!;
+		}
+		const request = authFetch(input, init);
+		requestCache.set(cacheKey, request);
+		if (requestCache.size > MAX_CACHE_SIZE) {
+			const firstKey = requestCache.keys().next().value;
+			if (firstKey) requestCache.delete(firstKey);
+		}
+		return request;
+	};
+
 	return createClient({
 		url: saleorApiUrl,
 		suspense: true,
 		requestPolicy: "cache-first",
-		fetch: withRetry(authFetch) as typeof fetch,
+		fetch: withRetry(cachedAuthFetch) as typeof fetch,
 		exchanges: [dedupExchange, cacheExchange, fetchExchange],
 	});
 };

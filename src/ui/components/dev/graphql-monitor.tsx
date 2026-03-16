@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Activity, AlertTriangle, X, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
@@ -63,8 +63,19 @@ let totalErrors = 0;
 let totalRetries = 0;
 
 // Track recent failed operations for retry detection
+// Use bounded cache to prevent unbounded memory growth
+const MAX_FAILED_OPS_SIZE = 100;
 const recentFailedOps = new Map<string, { timestamp: number; count: number }>();
 const RETRY_WINDOW_MS = 5000; // Consider it a retry if same operation fails within 5s
+
+// Helper to enforce bounded cache size with FIFO eviction
+function addToRecentFailedOps(operation: string, data: { timestamp: number; count: number }) {
+	recentFailedOps.set(operation, data);
+	if (recentFailedOps.size > MAX_FAILED_OPS_SIZE) {
+		const firstKey = recentFailedOps.keys().next().value;
+		if (firstKey) recentFailedOps.delete(firstKey);
+	}
+}
 
 // Thresholds for alerts
 const RATE_ALERT_THRESHOLD = 5; // requests/second
@@ -146,7 +157,8 @@ export function logGraphQLRequest(log: RequestLog) {
 		requestLogs.shift();
 	}
 
-	// Update operation stats
+	// Update operation stats with bounded cache
+	const MAX_OPERATION_STATS = 500;
 	const stats = operationStats.get(log.operation) || {
 		count: 0,
 		errors: 0,
@@ -162,6 +174,17 @@ export function logGraphQLRequest(log: RequestLog) {
 	}
 	stats.lastSeen = log.timestamp;
 	operationStats.set(log.operation, stats);
+	// Enforce bounded cache to prevent memory leak
+	if (operationStats.size > MAX_OPERATION_STATS) {
+		const firstKey = operationStats.keys().next().value;
+		if (firstKey) operationStats.delete(firstKey);
+	}
+
+	// Enforce cache size limits on failed operations to prevent unbounded growth
+	if (recentFailedOps.size > MAX_FAILED_OPS_SIZE) {
+		const firstFailedKey = recentFailedOps.keys().next().value;
+		if (firstFailedKey) recentFailedOps.delete(firstFailedKey);
+	}
 
 	// Dispatch custom event for React components to listen to
 	window.dispatchEvent(new CustomEvent("graphql-request", { detail: enrichedLog }));
@@ -277,6 +300,22 @@ export function createMonitoredFetch(originalFetch: FetchFn, source?: RequestSou
 export function GraphQLMonitor() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
+	const listenerRefRef = useRef<(() => void)[]>([]);
+	
+	useEffect(() => {
+		return () => {
+			// Cleanup all stored listeners on unmount
+			listenerRefRef.current.forEach(unsubscribe => {
+				try {
+					unsubscribe();
+				} catch (e) {
+					console.error('Error unsubscribing listener:', e);
+				}
+			});
+			listenerRefRef.current = [];
+		};
+	}, []);
+	
 	const [stats, setStats] = useState({
 		total: 0,
 		errors: 0,
@@ -309,7 +348,10 @@ export function GraphQLMonitor() {
 
 		const updateStats = () => {
 			const rate = calculateRate();
-			const sortedOps = Array.from(operationStats.entries()).sort((a, b) => b[1].count - a[1].count);
+			const sortedOps = useMemo(
+				() => Array.from(operationStats.entries()).sort((a, b) => b[1].count - a[1].count),
+				[],
+			);
 
 			setStats({
 				total: totalRequests,
@@ -340,10 +382,13 @@ export function GraphQLMonitor() {
 		// Listen for new requests
 		const handleRequest = () => updateStats();
 		window.addEventListener("graphql-request", handleRequest);
+		listenerRefRef.current.push(() => window.removeEventListener("graphql-request", handleRequest));
 
 		// Periodic update for rate decay
 		const interval = setInterval(updateStats, 1000);
+		listenerRefRef.current.push(() => clearInterval(interval));
 
+		// Cleanup: remove event listener and clear interval on unmount
 		return () => {
 			window.removeEventListener("graphql-request", handleRequest);
 			clearInterval(interval);
