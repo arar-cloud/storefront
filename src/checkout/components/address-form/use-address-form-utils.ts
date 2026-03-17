@@ -85,13 +85,16 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 				return [];
 			}
 
-			return Object.entries(address).reduce((result, [fieldName, fieldValue]) => {
-				if (!isRequiredField(fieldName as AddressField)) {
-					return result;
-				}
+			return useMemo(
+				() => Object.entries(address).reduce((result, [fieldName, fieldValue]) => {
+					if (!isRequiredField(fieldName as AddressField)) {
+						return result;
+					}
 
-				return !!fieldValue ? result : ([...result, fieldName] as AddressField[]);
-			}, [] as AddressField[]);
+					return !!fieldValue ? result : ([...result, fieldName] as AddressField[]);
+				}, [] as AddressField[]),
+				[address, isRequiredField],
+			);
 		},
 		[isRequiredField],
 	);
@@ -102,14 +105,16 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 	);
 
 	const getLocalizedFieldLabel = useCallback((field: AddressField, localizedField?: string) => {
-		try {
-			const translatedLabel =
-				localizedAddressFieldMessages[camelCase(localizedField) as LocalizedAddressFieldLabel];
-			return translatedLabel;
-		} catch (e) {
-			console.warn(`Missing translation: ${localizedField}`);
-			return addressFieldMessages[camelCase(field) as AddressFieldLabel];
-		}
+		return useMemo(() => {
+			try {
+				const translatedLabel =
+					localizedAddressFieldMessages[camelCase(localizedField) as LocalizedAddressFieldLabel];
+				return translatedLabel;
+			} catch (e) {
+				console.warn(`Missing translation: ${localizedField}`);
+				return addressFieldMessages[camelCase(field) as AddressFieldLabel];
+			}
+		}, [field, localizedField]);
 	}, []);
 
 	const getFieldLabel = useCallback(
