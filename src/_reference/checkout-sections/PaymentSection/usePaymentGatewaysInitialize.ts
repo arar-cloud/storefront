@@ -30,7 +30,7 @@ export const usePaymentGatewaysInitialize = () => {
 				onSubmit: paymentGatewaysInitialize,
 				parse: () => ({
 					checkoutId,
-					paymentGateways: getFilteredPaymentGateways(availablePaymentGateways).map(({ config, id }) => ({
+					paymentGateways: useMemo(() => getFilteredPaymentGateways(availablePaymentGateways).map(({ config, id }) => ({
 						id,
 						data: config,
 					})),
