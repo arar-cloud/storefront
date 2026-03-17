@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, use } from "react";
+import { createContext, use, useMemo } from "react";
 import { type AccountUser } from "@/app/[channel]/(main)/account/get-current-user";
 
 const AccountContext = createContext<AccountUser | null>(null);
 
 export function AccountProvider({ user, children }: { user: AccountUser; children: React.ReactNode }) {
-	return <AccountContext value={user}>{children}</AccountContext>;
+	const memoizedUser = useMemo(() => user, [user]);
+	return <AccountContext value={memoizedUser}>{children}</AccountContext>;
 }
 
 export function useAccountUser(): AccountUser {
