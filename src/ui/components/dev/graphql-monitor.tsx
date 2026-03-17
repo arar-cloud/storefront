@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Activity, AlertTriangle, X, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
