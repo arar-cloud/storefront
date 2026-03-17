@@ -288,6 +288,9 @@ export function GraphQLMonitor() {
 		recentErrors: [] as ErrorLog[],
 		recentRequests: [] as RequestLog[],
 	});
+	
+	// Memoize stats operations to avoid recalculation on every render
+	const memoizedStats = useMemo(() => stats, [stats.total, stats.errors, stats.operations.length]);
 	const [showErrors, setShowErrors] = useState(false);
 	const [showRequests, setShowRequests] = useState(false);
 	const [expandedError, setExpandedError] = useState<ErrorLog | null>(null);
