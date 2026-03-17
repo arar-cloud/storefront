@@ -299,7 +299,7 @@ export function GraphQLMonitor() {
 	const calculateRate = useCallback(() => {
 		const now = Date.now();
 		const windowStart = now - WINDOW_SIZE_MS;
-		const recentRequests = requestLogs.filter((log) => log.timestamp > windowStart);
+		const recentRequests = useMemo(() => requestLogs.filter((log) => log.timestamp > windowStart), [windowStart]);
 		return recentRequests.length / (WINDOW_SIZE_MS / 1000);
 	}, []);
 
