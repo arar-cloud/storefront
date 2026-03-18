@@ -1,3 +1,27 @@
+/**
+ * Sanitize error message for client-safe display
+ * Prevents information disclosure of internal GraphQL schema details
+ */
+function sanitizeErrorMessage(message: string): string {
+  // Remove internal GraphQL paths and schema information
+  if (message.includes("Cannot query field") || message.includes("Unknown type")) {
+    return "An error occurred processing your request";
+  }
+
+  // Remove database connection details
+  if (message.includes("Connection refused") || message.includes("database")) {
+    return "A server error occurred";
+  }
+
+  // Remove authentication token details
+  if (message.includes("token") || message.includes("auth")) {
+    return "Authentication failed";
+  }
+
+  // Return sanitized message
+  return message.substring(0, 200);
+}
+
 import { type TypedDocumentString } from "../gql/graphql";
 
 // ============================================================================
