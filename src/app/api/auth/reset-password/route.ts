@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
+// Email validation regex (RFC 5322 simplified)
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// URL validation - ensure HTTPS and same-origin or allowlisted domains
+const ALLOWED_REDIRECT_DOMAINS = process.env.ALLOWED_REDIRECT_DOMAINS?.split(",") || [];
+
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
     requestPasswordReset(email: $email, channel: $channel, redirectUrl: $redirectUrl) {
@@ -25,8 +30,42 @@ interface RequestPasswordResetResult {
 	};
 }
 
+// Validate email format
+function isValidEmail(email: string): boolean {
+	if (typeof email !== "string" || email.length > 254) return false;
+	return EMAIL_REGEX.test(email);
+}
+
+// Validate redirect URL - prevent open redirect attacks
+function isValidRedirectUrl(url: string): boolean {
+	if (typeof url !== "string") return false;
+	try {
+		const parsed = new URL(url);
+		// Only allow HTTPS
+		if (parsed.protocol !== "https:") return false;
+		// Check against allowlist
+		if (ALLOWED_REDIRECT_DOMAINS.length > 0) {
+			return ALLOWED_REDIRECT_DOMAINS.some(domain => parsed.hostname === domain || parsed.hostname.endsWith("." + domain));
+		}
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as ResetPasswordRequest;
+	try {
+		const body = (await request.json()) as ResetPasswordRequest;
+		// Input validation
+		if (!isValidEmail(body.email)) {
+			return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+		}
+		if (!isValidRedirectUrl(body.redirectUrl)) {
+			return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+		}
+		if (typeof body.channel !== "string" || body.channel.length === 0) {
+			return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+		}
 	const { email, channel, redirectUrl } = body;
 
 	if (!email || !channel || !redirectUrl) {
@@ -52,12 +91,20 @@ export async function POST(request: NextRequest) {
 
 	const requestPasswordReset = result.data.requestPasswordReset;
 
-	// Saleor validation errors - log but don't expose to prevent email enumeration
-	if (requestPasswordReset?.errors?.length) {
-		console.error("Password reset validation errors");
-		// Still return success to prevent email enumeration
-	}
+		// Saleor validation errors - log but don't expose to prevent email enumeration
+		if (requestPasswordReset?.errors?.length) {
+			console.error("Password reset validation errors");
+			// Still return success to prevent email enumeration
+		}
 
-	// Always return success to prevent email enumeration
-	return NextResponse.json({ success: true });
+		// Always return success to prevent email enumeration
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		// Log error internally but don't expose details to client
+		console.error("[Password Reset Error]", error);
+		return NextResponse.json(
+			{ error: "Request failed" },
+			{ status: 500 }
+		);
+	}
 }
