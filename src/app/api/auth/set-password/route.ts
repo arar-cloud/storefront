@@ -1,3 +1,10 @@
+import { z } from "zod";
+
+const setPasswordSchema = z.object({
+  token: z.string().min(20, "Invalid token"),
+  password: z.string().min(8, "Password must be at least 8 characters").regex(/[A-Z]/, "Password must contain uppercase").regex(/[0-9]/, "Password must contain numbers"),
+});
+
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
@@ -32,11 +39,24 @@ interface SetPasswordResult {
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as SetPasswordRequest;
+	
+	// Validate input with strict schema
+	const validated = setPasswordSchema.safeParse({
+		token: body.token,
+		password: body.password,
+	});
+	if (!validated.success) {
+		return NextResponse.json(
+			{ errors: [{ message: "Validation failed: " + validated.error.errors.map(e => e.message).join(", "), code: "VALIDATION_ERROR" }] },
+			{ status: 400 },
+		);
+	}
+	
 	const { email, token, password } = body;
 
-	if (!email || !token || !password) {
+	if (!email) {
 		return NextResponse.json(
-			{ errors: [{ message: "Email, token, and password are required", code: "REQUIRED" }] },
+			{ errors: [{ message: "Email is required", code: "REQUIRED" }] },
 			{ status: 400 },
 		);
 	}

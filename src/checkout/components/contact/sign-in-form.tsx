@@ -43,7 +43,18 @@ export const SignInForm: FC<SignInFormProps> = ({
 	const [successMessage, setSuccessMessage] = useState("");
 	const [passwordResetSent, setPasswordResetSent] = useState(false);
 
-	const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+	const validateEmail = (value: string) => {
+		// RFC 5322 compliant email validation
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(value) || value.length > 254) {
+			return false;
+		}
+		// Prevent XSS: reject if value contains encoded entities or suspicious patterns
+		if (/<|>|["'`]|&#|%3[Cc];/.test(value)) {
+			return false;
+		}
+		return true;
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

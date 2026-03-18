@@ -1,3 +1,12 @@
+import { z } from "zod";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
+
+const resetPasswordSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  channel: z.string().min(1, "Channel is required"),
+  redirectUrl: z.string().url("Invalid redirect URL"),
+});
+
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
@@ -27,14 +36,25 @@ interface RequestPasswordResetResult {
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as ResetPasswordRequest;
-	const { email, channel, redirectUrl } = body;
-
-	if (!email || !channel || !redirectUrl) {
+	
+	// Apply rate limiting
+	if (!checkRateLimit(`reset-password:${body.email}`)) {
 		return NextResponse.json(
-			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
+			{ error: "Too many reset attempts. Please try again later." },
+			{ status: 429, headers: { "Retry-After": "900" } }
+		);
+	}
+	
+	// Validate input against schema
+	const validated = resetPasswordSchema.safeParse(body);
+	if (!validated.success) {
+		return NextResponse.json(
+			{ errors: [{ message: "Invalid request format", code: "VALIDATION_ERROR" }] },
 			{ status: 400 },
 		);
 	}
+	
+	const { email, channel, redirectUrl } = validated.data;
 
 	const result = await executeRawGraphQL<RequestPasswordResetResult>({
 		query: REQUEST_PASSWORD_RESET_MUTATION,
