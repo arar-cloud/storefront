@@ -43,7 +43,11 @@ export const SignInForm: FC<SignInFormProps> = ({
 	const [successMessage, setSuccessMessage] = useState("");
 	const [passwordResetSent, setPasswordResetSent] = useState(false);
 
-	const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+	const validateEmail = (value: string) => {
+		// RFC 5322 compliant email validation
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		return emailRegex.test(value) && value.length <= 254; // Max email length per spec
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

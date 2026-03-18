@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkRateLimit, getRateLimitRemaining } from "@/lib/auth/rate-limit";
+import { applySecurityHeaders } from "@/lib/auth/security-headers";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -107,10 +108,11 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Success
-		return NextResponse.json({
+		const response = NextResponse.json({
 			user: accountRegister?.user,
 			message: "Account created successfully. Please check your email to verify your account.",
 		});
+		return applySecurityHeaders(response);
 	} catch (err) {
 		console.error("Registration exception:", err);
 		return NextResponse.json(
