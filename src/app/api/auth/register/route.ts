@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  registerSchema,
+  validateRequestBody,
+  ValidationError,
+} from "@/lib/auth/validation-schemas";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
 const REGISTER_MUTATION = `
@@ -34,15 +39,13 @@ interface AccountRegisterResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as RegisterRequest;
-	const { email, password, firstName, lastName, channel, redirectUrl } = body;
+	try {
+		const body = (await request.json()) as RegisterRequest;
 
-	if (!email || !password) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email and password are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
+		// Validate request body using Joi schema
+		const validatedData = validateRequestBody(body, registerSchema);
+
+		const { email, password, firstName, lastName, channel, redirectUrl } = validatedData;
 
 	const result = await executeRawGraphQL<AccountRegisterResult>({
 		query: REGISTER_MUTATION,
@@ -75,9 +78,27 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ errors: validationResult.error.validationErrors }, { status: 400 });
 	}
 
-	// Success
-	return NextResponse.json({
-		user: accountRegister?.user,
-		message: "Account created successfully. Please check your email to verify your account.",
-	});
+		// Success
+		return NextResponse.json({
+			user: accountRegister?.user,
+			message: "Account created successfully. Please check your email to verify your account.",
+		});
+	} catch (error) {
+		// Handle validation errors
+		if (error instanceof ValidationError) {
+			return NextResponse.json(
+				{
+					error: "Validation failed",
+					fields: error.fieldErrors,
+				},
+				{ status: 400 }
+			);
+		}
+
+		console.error("Registration error:", error);
+		return NextResponse.json(
+			{ error: "Failed to process registration" },
+			{ status: 500 }
+		);
+	}
 }
