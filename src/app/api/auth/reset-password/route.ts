@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
 
 const resetPasswordSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -35,6 +36,14 @@ interface RequestPasswordResetResult {
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as ResetPasswordRequest;
+	
+	// Apply rate limiting
+	if (!checkRateLimit(`reset-password:${body.email}`)) {
+		return NextResponse.json(
+			{ error: "Too many reset attempts. Please try again later." },
+			{ status: 429, headers: { "Retry-After": "900" } }
+		);
+	}
 	
 	// Validate input against schema
 	const validated = resetPasswordSchema.safeParse(body);
