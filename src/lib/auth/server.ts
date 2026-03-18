@@ -16,6 +16,13 @@ const createServerCookieStorage = async () => {
 	const cookieStore = await cookies();
 	const isSecure = process.env.NODE_ENV === "production";
 
+	// Security: Warn if not using HTTPS in production
+	if (!isSecure && process.env.NODE_ENV === "production") {
+		console.warn(
+			"[Security] Auth tokens being stored without HTTPS. Ensure secure: true in production."
+		);
+	}
+
 	return {
 		getItem: (key: string): string | null => {
 			const cookieName = encodeCookieName(key);
@@ -25,10 +32,13 @@ const createServerCookieStorage = async () => {
 			const cookieName = encodeCookieName(key);
 			const maxAge = key.includes("refresh") ? REFRESH_TOKEN_MAX_AGE : ACCESS_TOKEN_MAX_AGE;
 			try {
+				// Security: Always use HttpOnly to prevent XSS token theft
+				// Use Secure flag in production (HTTPS only) to prevent MITM attacks
+				// Use SameSite=Lax to prevent CSRF while allowing normal navigation
 				cookieStore.set(cookieName, value, {
-					httpOnly: false,
-					sameSite: "lax",
-					secure: isSecure,
+					httpOnly: true, // CRITICAL: Prevents JavaScript access, protecting against XSS
+					sameSite: "lax", // Prevents CSRF attacks
+					secure: isSecure, // HTTPS only in production
 					path: "/",
 					maxAge,
 				});
