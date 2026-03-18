@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  setPasswordSchema,
+  validateRequestBody,
+  ValidationError,
+} from "@/lib/auth/validation-schemas";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
@@ -31,22 +36,15 @@ interface SetPasswordResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as SetPasswordRequest;
-	const { email, token, password } = body;
+	try {
+		const body = (await request.json()) as SetPasswordRequest;
 
-	if (!email || !token || !password) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email, token, and password are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
+		// Validate request body using Joi schema
+		const validatedData = validateRequestBody(body, setPasswordSchema);
+		const { email, token, password } = validatedData;
 
-	if (password.length < 8) {
-		return NextResponse.json(
-			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
-			{ status: 400 },
-		);
-	}
+		// Proceed with validated data
+		// (Schema validation already covers required fields and password length)
 
 	const result = await executeRawGraphQL<SetPasswordResult>({
 		query: SET_PASSWORD_MUTATION,
@@ -102,4 +100,22 @@ export async function POST(request: NextRequest) {
 		{ errors: [{ message: "Failed to set password", code: "UNKNOWN" }] },
 		{ status: 500 },
 	);
+	} catch (error) {
+		// Handle validation errors
+		if (error instanceof ValidationError) {
+			return NextResponse.json(
+				{
+					error: "Validation failed",
+					fields: error.fieldErrors,
+				},
+				{ status: 400 }
+			);
+		}
+
+		console.error("Set password error:", error);
+		return NextResponse.json(
+			{ error: "Failed to process set password request" },
+			{ status: 500 }
+		);
+	}
 }
