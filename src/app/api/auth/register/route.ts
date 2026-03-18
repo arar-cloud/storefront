@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { checkRateLimit, getRateLimitRemaining } from "@/lib/auth/rate-limit";
 import { applySecurityHeaders } from "@/lib/auth/security-headers";
+import { sanitizeEmail, sanitizeName } from "@/lib/auth/sanitize";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -66,7 +67,13 @@ export async function POST(request: NextRequest) {
 			);
 		}
 		
-		const { email, password, firstName, lastName } = validated.data;
+		let { email, password, firstName, lastName } = validated.data;
+		
+		// Sanitize inputs
+		email = sanitizeEmail(email);
+		firstName = sanitizeName(firstName);
+		lastName = sanitizeName(lastName);
+		
 		const { channel, redirectUrl } = body;
 		
 		if (!channel || !redirectUrl) {
