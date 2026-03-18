@@ -1,3 +1,12 @@
+import { z } from "zod";
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters").regex(/[A-Z]/, "Password must contain uppercase").regex(/[0-9]/, "Password must contain numbers"),
+  firstName: z.string().min(1, "First name required").max(100),
+  lastName: z.string().min(1, "Last name required").max(100),
+});
+
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
@@ -34,50 +43,69 @@ interface AccountRegisterResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as RegisterRequest;
-	const { email, password, firstName, lastName, channel, redirectUrl } = body;
+	try {
+		const body = (await request.json()) as RegisterRequest;
+		
+		// Validate input against schema
+		const validated = registerSchema.safeParse(body);
+		if (!validated.success) {
+			return NextResponse.json(
+				{ errors: [{ message: "Validation failed", code: "VALIDATION_ERROR", details: validated.error.flatten() }] },
+				{ status: 400 },
+			);
+		}
+		
+		const { email, password, firstName, lastName } = validated.data;
+		const { channel, redirectUrl } = body;
+		
+		if (!channel || !redirectUrl) {
+			return NextResponse.json(
+				{ errors: [{ message: "Channel and redirectUrl are required", code: "REQUIRED" }] },
+				{ status: 400 },
+			);
+		}
 
-	if (!email || !password) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email and password are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
-
-	const result = await executeRawGraphQL<AccountRegisterResult>({
-		query: REGISTER_MUTATION,
-		variables: {
-			input: {
-				email,
-				password,
-				firstName: firstName || "",
-				lastName: lastName || "",
-				channel,
-				redirectUrl,
+		const result = await executeRawGraphQL<AccountRegisterResult>({
+			query: REGISTER_MUTATION,
+			variables: {
+				input: {
+					email,
+					password,
+					firstName: firstName || "",
+					lastName: lastName || "",
+					channel,
+					redirectUrl,
+				},
 			},
-		},
-	});
+		});
 
-	// Network or GraphQL error
-	if (!result.ok) {
-		console.error("Registration error:", result.error.type);
+		// Network or GraphQL error
+		if (!result.ok) {
+			console.error("Registration error:", result.error.type);
+			return NextResponse.json(
+				{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
+				{ status: result.error.type === "network" ? 503 : 400 },
+			);
+		}
+
+		const accountRegister = result.data.accountRegister;
+
+		// Saleor validation errors
+		if (accountRegister?.errors?.length) {
+			const validationResult = asValidationError(accountRegister.errors);
+			return NextResponse.json({ errors: validationResult.error.validationErrors }, { status: 400 });
+		}
+
+		// Success
+		return NextResponse.json({
+			user: accountRegister?.user,
+			message: "Account created successfully. Please check your email to verify your account.",
+		});
+	} catch (err) {
+		console.error("Registration exception:", err);
 		return NextResponse.json(
-			{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
-			{ status: result.error.type === "network" ? 503 : 400 },
+			{ errors: [{ message: "Internal server error", code: "INTERNAL_ERROR" }] },
+			{ status: 500 },
 		);
 	}
-
-	const accountRegister = result.data.accountRegister;
-
-	// Saleor validation errors
-	if (accountRegister?.errors?.length) {
-		const validationResult = asValidationError(accountRegister.errors);
-		return NextResponse.json({ errors: validationResult.error.validationErrors }, { status: 400 });
-	}
-
-	// Success
-	return NextResponse.json({
-		user: accountRegister?.user,
-		message: "Account created successfully. Please check your email to verify your account.",
-	});
 }
