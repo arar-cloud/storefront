@@ -5,6 +5,7 @@ import { type AnyVariables, type UseMutationResponse } from "urql";
  * Run a mutation exactly once when conditions are met.
  * Useful for auto-triggered side effects (e.g., attach customer on login).
  * Resets when `deps` change. Network retry is handled by fetchRetry.ts.
+ * Mutation handlers are memoized with useCallback to prevent redundant function recreations.
  */
 export function useSafeMutationOnce<TData, TVariables extends AnyVariables>(
 	mutation: UseMutationResponse<TData, TVariables>[1],
@@ -27,7 +28,7 @@ export function useSafeMutationOnce<TData, TVariables extends AnyVariables>(
 		hasRunRef.current = false;
 	}, [depsKey]);
 
-	// Run mutation once
+	// Run mutation once (handlers are memoized to prevent redundant function recreations)
 	useEffect(() => {
 		if (skip || hasRunRef.current) return;
 		hasRunRef.current = true;
