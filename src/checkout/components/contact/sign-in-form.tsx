@@ -46,7 +46,14 @@ export const SignInForm: FC<SignInFormProps> = ({
 	const validateEmail = (value: string) => {
 		// RFC 5322 compliant email validation
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailRegex.test(value) && value.length <= 254; // Max email length per spec
+		if (!emailRegex.test(value) || value.length > 254) {
+			return false;
+		}
+		// Prevent XSS: reject if value contains encoded entities or suspicious patterns
+		if (/<|>|["'`]|&#|%3[Cc];/.test(value)) {
+			return false;
+		}
+		return true;
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
