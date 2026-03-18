@@ -105,16 +105,14 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 	);
 
 	const getLocalizedFieldLabel = useCallback((field: AddressField, localizedField?: string) => {
-		return useMemo(() => {
-			try {
-				const translatedLabel =
-					localizedAddressFieldMessages[camelCase(localizedField) as LocalizedAddressFieldLabel];
-				return translatedLabel;
-			} catch (e) {
-				console.warn(`Missing translation: ${localizedField}`);
-				return addressFieldMessages[camelCase(field) as AddressFieldLabel];
-			}
-		}, [field, localizedField]);
+		try {
+			const translatedLabel =
+				localizedAddressFieldMessages[camelCase(localizedField) as LocalizedAddressFieldLabel];
+			return translatedLabel;
+		} catch (e) {
+			console.warn(`Missing translation: ${localizedField}`);
+			return addressFieldMessages[camelCase(field) as AddressFieldLabel];
+		}
 	}, []);
 
 	const getFieldLabel = useCallback(
