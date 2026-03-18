@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkRateLimit, getRateLimitRemaining } from "@/lib/auth/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -45,6 +46,15 @@ interface AccountRegisterResult {
 export async function POST(request: NextRequest) {
 	try {
 		const body = (await request.json()) as RegisterRequest;
+		
+		// Apply rate limiting by email
+		const { email } = body;
+		if (!checkRateLimit(`register:${email}`)) {
+			return NextResponse.json(
+				{ error: "Too many registration attempts. Please try again later." },
+				{ status: 429, headers: { "Retry-After": "900" } }
+			);
+		}
 		
 		// Validate input against schema
 		const validated = registerSchema.safeParse(body);
