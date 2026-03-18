@@ -85,13 +85,16 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 				return [];
 			}
 
-			return Object.entries(address).reduce((result, [fieldName, fieldValue]) => {
-				if (!isRequiredField(fieldName as AddressField)) {
-					return result;
-				}
+			return useMemo(
+				() => Object.entries(address).reduce((result, [fieldName, fieldValue]) => {
+					if (!isRequiredField(fieldName as AddressField)) {
+						return result;
+					}
 
-				return !!fieldValue ? result : ([...result, fieldName] as AddressField[]);
-			}, [] as AddressField[]);
+					return !!fieldValue ? result : ([...result, fieldName] as AddressField[]);
+				}, [] as AddressField[]),
+				[address, isRequiredField],
+			);
 		},
 		[isRequiredField],
 	);

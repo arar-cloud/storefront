@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useMemo } from "react";
 import { type CountryCode, usePaymentGatewaysInitializeMutation } from "@/checkout/graphql";
 import { useCheckout } from "@/checkout/hooks/useCheckout";
 import { useSubmit } from "@/checkout/hooks/useSubmit";
@@ -30,7 +30,7 @@ export const usePaymentGatewaysInitialize = () => {
 				onSubmit: paymentGatewaysInitialize,
 				parse: () => ({
 					checkoutId,
-					paymentGateways: getFilteredPaymentGateways(availablePaymentGateways).map(({ config, id }) => ({
+					paymentGateways: useMemo(() => getFilteredPaymentGateways(availablePaymentGateways).map(({ config, id }) => ({
 						id,
 						data: config,
 					})),

@@ -1,0 +1,14 @@
+{
+  "plugins": ["performance"],
+  "rules": {
+    "performance/no-inefficient-array-methods": "warn",
+    "react/no-unstable-default-props": "warn",
+    "react-perf/jsx-no-new-array-as-prop": "warn",
+    "react-perf/jsx-no-new-object-as-prop": "warn"
+  },
+  "env": {
+    "browser": true,
+    "es2020": true,
+    "node": true
+  }
+}

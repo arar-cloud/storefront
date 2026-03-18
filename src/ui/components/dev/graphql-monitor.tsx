@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Activity, AlertTriangle, X, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
@@ -288,6 +288,9 @@ export function GraphQLMonitor() {
 		recentErrors: [] as ErrorLog[],
 		recentRequests: [] as RequestLog[],
 	});
+	
+	// Memoize stats operations to avoid recalculation on every render
+	const memoizedStats = useMemo(() => stats, [stats.total, stats.errors, stats.operations.length]);
 	const [showErrors, setShowErrors] = useState(false);
 	const [showRequests, setShowRequests] = useState(false);
 	const [expandedError, setExpandedError] = useState<ErrorLog | null>(null);
@@ -299,7 +302,7 @@ export function GraphQLMonitor() {
 	const calculateRate = useCallback(() => {
 		const now = Date.now();
 		const windowStart = now - WINDOW_SIZE_MS;
-		const recentRequests = requestLogs.filter((log) => log.timestamp > windowStart);
+		const recentRequests = useMemo(() => requestLogs.filter((log) => log.timestamp > windowStart), [windowStart]);
 		return recentRequests.length / (WINDOW_SIZE_MS / 1000);
 	}, []);
 
