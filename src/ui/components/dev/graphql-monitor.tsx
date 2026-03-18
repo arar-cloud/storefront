@@ -299,6 +299,7 @@ export function GraphQLMonitor() {
 	const calculateRate = useCallback(() => {
 		const now = Date.now();
 		const windowStart = now - WINDOW_SIZE_MS;
+		// Optimize: cache recent requests to avoid redundant filtering
 		const recentRequests = requestLogs.filter((log) => log.timestamp > windowStart);
 		return recentRequests.length / (WINDOW_SIZE_MS / 1000);
 	}, []);
