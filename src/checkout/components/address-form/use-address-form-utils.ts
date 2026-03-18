@@ -1,5 +1,5 @@
+import { useMemo, useCallback } from "react";
 import camelCase from "lodash-es/camelCase";
-import { useCallback, useMemo } from "react";
 import {
 	type CountryCode,
 	useAddressValidationRulesQuery,
@@ -60,9 +60,19 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 		variables: { countryCode },
 	});
 
-	const validationRules = data?.addressValidationRules as ValidationRulesFragment;
+	const validationRules = useMemo(
+		() => data?.addressValidationRules as ValidationRulesFragment,
+		[data?.addressValidationRules]
+	);
 
-	const { countryAreaType, postalCodeType, cityType } = validationRules || {};
+	const { countryAreaType, postalCodeType, cityType } = useMemo(
+		() => ({
+			countryAreaType: validationRules?.countryAreaType,
+			postalCodeType: validationRules?.postalCodeType,
+			cityType: validationRules?.cityType,
+		}),
+		[validationRules?.countryAreaType, validationRules?.postalCodeType, validationRules?.cityType]
+	);
 
 	const localizedFields = useMemo(
 		() => ({
@@ -73,6 +83,7 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 		[cityType, countryAreaType, postalCodeType],
 	);
 
+	// Memoized field validation to prevent redundant computations
 	const isRequiredField = useCallback(
 		(field: AddressField) =>
 			getRequiredAddressFields(validationRules?.requiredFields as AddressField[]).includes(field),

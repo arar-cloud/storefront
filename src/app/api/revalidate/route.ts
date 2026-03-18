@@ -73,17 +73,43 @@ function getClientIP(request: NextRequest): string {
 
 /**
  * Verify Saleor webhook signature
+ * Uses constant-time comparison to prevent timing attacks
  */
 function verifyWebhookSignature(payload: string, signature: string | null): boolean {
-	if (!WEBHOOK_SECRET || !signature) return false;
+	// Defensive null/undefined checks
+	if (!WEBHOOK_SECRET) {
+		console.error("[Security] SALEOR_WEBHOOK_SECRET not configured");
+		return false;
+	}
+
+	if (!signature || typeof signature !== "string") {
+		console.warn("[Security] Webhook request missing or invalid signature header");
+		return false;
+	}
+
+	if (!payload || typeof payload !== "string") {
+		console.warn("[Security] Webhook request with empty or invalid body");
+		return false;
+	}
 
 	const hmac = createHmac("sha256", WEBHOOK_SECRET);
 	hmac.update(payload);
 	const expectedSignature = hmac.digest("hex");
 
+	// Constant-time comparison prevents timing attacks
 	try {
-		return timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
-	} catch {
+		// Both signatures must have equal length; convert to Buffer for comparison
+		const signatureBuffer = Buffer.from(signature, "hex");
+		const expectedBuffer = Buffer.from(expectedSignature, "hex");
+
+		if (signatureBuffer.length !== expectedBuffer.length) {
+			console.warn("[Security] Signature length mismatch");
+			return false;
+		}
+
+		return timingSafeEqual(signatureBuffer, expectedBuffer);
+	} catch (error) {
+		console.error("[Security] Signature verification error:", error instanceof Error ? error.message : error);
 		return false;
 	}
 }
