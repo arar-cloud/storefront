@@ -18,13 +18,16 @@ export const useCheckout = ({ pause = false } = {}) => {
 		pause: shouldPause,
 	});
 
+	// Memoize callbacks to prevent cascading re-renders in child components
+	const handleRefetch = useCallback(() => refetch(), [refetch]);
+
 	return useMemo(
 		() => ({
 			checkout: data?.checkout as Checkout,
 			fetching: fetching || stale,
-			refetch,
+			refetch: handleRefetch,
 			hasCheckoutId: !!id,
 		}),
-		[data?.checkout, fetching, refetch, stale, id],
+		[data?.checkout, fetching, handleRefetch, stale, id],
 	);
 };
