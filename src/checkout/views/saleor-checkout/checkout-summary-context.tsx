@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC } from "react";
+import { type FC, useMemo } from "react";
 import { type CheckoutFragment } from "@/checkout/graphql";
 import { formatShippingPrice } from "@/checkout/lib/utils/money";
 
@@ -23,9 +23,11 @@ interface CheckoutSummaryContextProps {
  * Used in ShippingStep and PaymentStep to show context from previous steps.
  */
 export const CheckoutSummaryContext: FC<CheckoutSummaryContextProps> = ({ rows, onGoToStep }) => {
+	const memoizedRows = useMemo(() => rows, [rows]);
+	const memoizedCallback = useMemo(() => onGoToStep, [onGoToStep]);
 	return (
 		<section className="divide-y divide-border rounded-lg border border-border text-sm">
-			{rows.map((row) => (
+			{memoizedRows.map((row) => (
 				<div key={row.label} className="flex items-start gap-4 p-4">
 					<span className="w-16 shrink-0 pt-0.5 text-muted-foreground">{row.label}</span>
 					<span className="min-w-0 flex-1 break-words">{row.value}</span>
