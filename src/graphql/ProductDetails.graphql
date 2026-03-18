@@ -4,8 +4,7 @@ query ProductDetails($slug: String!, $channel: String!) {
 		name
 		slug
 		description
-		seoTitle
-		seoDescription
+
 		thumbnail(size: 1024, format: WEBP) {
 			url
 			alt
@@ -13,7 +12,6 @@ query ProductDetails($slug: String!, $channel: String!) {
 		media {
 			url(size: 1024, format: WEBP)
 			alt
-			type
 		}
 		category {
 			id
