@@ -1,3 +1,11 @@
+import { z } from "zod";
+
+const resetPasswordSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  channel: z.string().min(1, "Channel is required"),
+  redirectUrl: z.string().url("Invalid redirect URL"),
+});
+
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
@@ -27,14 +35,17 @@ interface RequestPasswordResetResult {
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as ResetPasswordRequest;
-	const { email, channel, redirectUrl } = body;
-
-	if (!email || !channel || !redirectUrl) {
+	
+	// Validate input against schema
+	const validated = resetPasswordSchema.safeParse(body);
+	if (!validated.success) {
 		return NextResponse.json(
-			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
+			{ errors: [{ message: "Invalid request format", code: "VALIDATION_ERROR" }] },
 			{ status: 400 },
 		);
 	}
+	
+	const { email, channel, redirectUrl } = validated.data;
 
 	const result = await executeRawGraphQL<RequestPasswordResetResult>({
 		query: REQUEST_PASSWORD_RESET_MUTATION,
