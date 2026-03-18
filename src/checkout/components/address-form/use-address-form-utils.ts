@@ -73,6 +73,7 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 		[cityType, countryAreaType, postalCodeType],
 	);
 
+	// Memoized field validation to prevent redundant computations
 	const isRequiredField = useCallback(
 		(field: AddressField) =>
 			getRequiredAddressFields(validationRules?.requiredFields as AddressField[]).includes(field),
