@@ -1,6 +1,5 @@
-import { lazy } from "react";
+import { useMemo, useCallback } from "react";
 import camelCase from "lodash-es/camelCase";
-import { useCallback, useMemo as AddressFormBase } from "react";
 import {
 	type CountryCode,
 	useAddressValidationRulesQuery,
@@ -61,9 +60,19 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 		variables: { countryCode },
 	});
 
-	const validationRules = data?.addressValidationRules as ValidationRulesFragment;
+	const validationRules = useMemo(
+		() => data?.addressValidationRules as ValidationRulesFragment,
+		[data?.addressValidationRules]
+	);
 
-	const { countryAreaType, postalCodeType, cityType } = validationRules || {};
+	const { countryAreaType, postalCodeType, cityType } = useMemo(
+		() => ({
+			countryAreaType: validationRules?.countryAreaType,
+			postalCodeType: validationRules?.postalCodeType,
+			cityType: validationRules?.cityType,
+		}),
+		[validationRules?.countryAreaType, validationRules?.postalCodeType, validationRules?.cityType]
+	);
 
 	const localizedFields = useMemo(
 		() => ({
