@@ -1,5 +1,6 @@
+import { lazy } from "react";
 import camelCase from "lodash-es/camelCase";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo as AddressFormBase } from "react";
 import {
 	type CountryCode,
 	useAddressValidationRulesQuery,
