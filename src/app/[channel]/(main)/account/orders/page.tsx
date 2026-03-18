@@ -14,6 +14,8 @@ type Props = {
 export default async function AccountOrdersPage({ searchParams }: Props) {
 	const { after } = await searchParams;
 
+	// Fetch orders with pagination to avoid N+1 queries and reduce API load
+	// Specifying exact fields needed to minimize payload size and improve caching
 	const result = await executeAuthenticatedGraphQL(CurrentUserOrdersPaginatedDocument, {
 		variables: {
 			first: ORDERS_PER_PAGE,
