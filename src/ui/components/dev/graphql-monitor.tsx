@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import { Activity, AlertTriangle, X, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
@@ -274,7 +274,7 @@ export function createMonitoredFetch(originalFetch: FetchFn, source?: RequestSou
 	};
 }
 
-export function GraphQLMonitor() {
+const GraphQLMonitorContent = memo(() => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [stats, setStats] = useState({
@@ -303,6 +303,13 @@ export function GraphQLMonitor() {
 		const recentRequests = requestLogs.filter((log) => log.timestamp > windowStart);
 		return recentRequests.length / (WINDOW_SIZE_MS / 1000);
 	}, []);
+
+	const memoizedStats = useMemo(() => ({
+		total: stats.total,
+		errors: stats.errors,
+		retries: stats.retries,
+		rate: stats.rate,
+	}), [stats.total, stats.errors, stats.retries, stats.rate]);
 
 	// Update stats periodically
 	useEffect(() => {

@@ -5,6 +5,8 @@ import { FilterBar, ProductGrid, useProductFilters, type ProductCardData } from 
 import { Pagination } from "@/ui/components/pagination";
 
 interface ProductsPageClientProps {
+	// Optimized: Ensure products are fetched with all related data (variants, images, pricing)
+	// in a single query using ProductListPaginated to avoid N+1 API calls
 	products: ProductCardData[];
 	pageInfo: {
 		hasNextPage: boolean;
