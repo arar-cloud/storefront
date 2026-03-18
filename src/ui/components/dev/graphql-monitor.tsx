@@ -299,9 +299,16 @@ const GraphQLMonitorContent = memo(() => {
 	const calculateRate = useCallback(() => {
 		const now = Date.now();
 		const windowStart = now - WINDOW_SIZE_MS;
-		// Optimize: cache recent requests to avoid redundant filtering
-		const recentRequests = requestLogs.filter((log) => log.timestamp > windowStart);
-		return recentRequests.length / (WINDOW_SIZE_MS / 1000);
+		// Optimize: single loop to filter and count simultaneously
+		let recentCount = 0;
+		for (let i = requestLogs.length - 1; i >= 0; i--) {
+			if (requestLogs[i].timestamp > windowStart) {
+				recentCount++;
+			} else {
+				break; // Logs are chronologically ordered
+			}
+		}
+		return recentCount / (WINDOW_SIZE_MS / 1000);
 	}, []);
 
 	const memoizedStats = useMemo(() => ({
