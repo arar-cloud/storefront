@@ -62,6 +62,8 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 	const { setSubmitInProgress, setShouldRegisterUser } = useCheckoutUpdateStateActions();
 	const { setIsProcessingPayment } = usePaymentProcessingScreen();
 
+	const adyenInstanceRef = useRef<any>(null);
+
 	const [currentTransactionId, setCurrentTransactionId] = useState<ParamBasicValue>(
 		getQueryParams().transaction,
 	);
@@ -294,6 +296,20 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 			setSubmitInProgress(true);
 		}
 	});
+
+	// Cleanup: destroy Adyen instance on unmount to prevent memory leaks
+	useEffect(() => {
+		return () => {
+			if (adyenInstanceRef.current?.unmount) {
+				try {
+					adyenInstanceRef.current.unmount();
+				} catch (e) {
+					console.warn("Error unmounting Adyen instance:", e);
+				}
+			}
+			adyenInstanceRef.current = null;
+		};
+	}, []);
 
 	// handle when page is opened from previously redirected payment
 	useEffect(() => {
