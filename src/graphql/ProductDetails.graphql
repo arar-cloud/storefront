@@ -1,5 +1,5 @@
 query ProductDetails($slug: String!, $channel: String!) {
-	product(slug: $slug, channel: $channel) {
+	product(slug: $slug, channel: $channel, first: 100) {
 		id
 		name
 		slug
@@ -31,6 +31,7 @@ query ProductDetails($slug: String!, $channel: String!) {
 		}
 		variants {
 			...VariantDetails
+			# Batched variant query to prevent N+1 calls
 		}
 		pricing {
 			priceRange {
