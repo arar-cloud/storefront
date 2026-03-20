@@ -13,6 +13,8 @@ interface RetryOptions {
 	maxDelay?: number;
 	/** Request timeout in ms (default: 30000) */
 	timeout?: number;
+	/** Custom retryable status codes (default: [408, 429, 500, 502, 503, 504]) */
+	retryableStatusCodes?: number[];
 }
 
 type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -25,8 +27,10 @@ function calculateBackoff(attempt: number, baseDelay: number, maxDelay: number):
 
 export function withRetry(
 	baseFetch: FetchFn,
-	{ maxRetries = 3, baseDelay = 500, maxDelay = 5000, timeout = 30000 }: RetryOptions = {},
+	{ maxRetries = 3, baseDelay = 500, maxDelay = 5000, timeout = 30000, retryableStatusCodes }: RetryOptions = {},
 ): FetchFn {
+	const statusCodesToRetry = retryableStatusCodes ? new Set(retryableStatusCodes) : RETRYABLE_STATUS_CODES;
+
 	return async (input, init) => {
 		let lastError: Error | null = null;
 
@@ -43,7 +47,7 @@ export function withRetry(
 				clearTimeout(timeoutId);
 
 				// Retry on transient server errors
-				if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < maxRetries) {
+				if (statusCodesToRetry.has(response.status) && attempt < maxRetries) {
 					await sleep(calculateBackoff(attempt, baseDelay, maxDelay));
 					continue;
 				}
