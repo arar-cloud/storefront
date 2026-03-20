@@ -9,6 +9,18 @@ const VALID_PHONE_REGEX = /^[+]?[(]?[0-9]{1,3}[)]?[-\s.]?[0-9]{1,4}[-\s.]?[0-9]{
 const VALID_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_STRING_LENGTH = 1000;
 const MAX_ARRAY_LENGTH = 100;
+const MAX_QUERY_DEPTH = 10;
+const MAX_QUERY_COMPLEXITY = 1000;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_REQUESTS = 100;
+
+interface QueryMetrics {
+  depth: number;
+  complexity: number;
+  timestamp: number;
+}
+
+const queryMetricsCache = new Map<string, QueryMetrics[]>();
 
 export interface ValidationResult {
   valid: boolean;
@@ -72,6 +84,45 @@ function validateArray(arr: unknown[], maxLength = MAX_ARRAY_LENGTH, fieldName =
   } else if (arr.length === 0) {
     errors.push(`${fieldName} cannot be empty`);
   }
+  return { valid: errors.length === 0, errors };
+}
+
+function validateQueryDepth(query: string): ValidationResult {
+  const errors: string[] = [];
+  const depthMatch = (query.match(/{/g) || []).length;
+  if (depthMatch > MAX_QUERY_DEPTH) {
+    errors.push(`Query depth ${depthMatch} exceeds maximum allowed depth of ${MAX_QUERY_DEPTH}`);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+function validateQueryComplexity(query: string): ValidationResult {
+  const errors: string[] = [];
+  const complexity = query.length * (query.match(/\$/g) || []).length;
+  if (complexity > MAX_QUERY_COMPLEXITY) {
+    errors.push(`Query complexity ${complexity} exceeds maximum allowed complexity of ${MAX_QUERY_COMPLEXITY}`);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateGraphQL(query: string, variables: Record<string, unknown>): ValidationResult {
+  const errors: string[] = [];
+  
+  const depthValidation = validateQueryDepth(query);
+  if (!depthValidation.valid) {
+    errors.push(...depthValidation.errors);
+  }
+  
+  const complexityValidation = validateQueryComplexity(query);
+  if (!complexityValidation.valid) {
+    errors.push(...complexityValidation.errors);
+  }
+  
+  const variablesValidation = graphqlValidation.validateVariables(variables);
+  if (!variablesValidation.valid) {
+    errors.push(...variablesValidation.errors);
+  }
+  
   return { valid: errors.length === 0, errors };
 }
 
