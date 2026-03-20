@@ -307,10 +307,23 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 		clearQueryParams("redirectResult", "resultCode");
 
-		void onTransactionProccess({
-			id: transaction,
-			data: { details: { redirectResult: decodedRedirectData } },
-		});
+		try {
+			if (!transaction || typeof transaction !== "string") {
+				console.error("[Adyen] Invalid transaction ID received");
+				throw new Error("Invalid transaction ID");
+			}
+			if (!decodedRedirectData || typeof decodedRedirectData !== "string") {
+				console.error("[Adyen] Invalid redirect result");
+				throw new Error("Invalid redirect result");
+			}
+			void onTransactionProccess({
+				id: transaction,
+				data: { details: { redirectResult: decodedRedirectData } },
+			});
+		} catch (error) {
+			console.error("[Adyen] Error processing transaction:", error);
+			throw error;
+		}
 	}, [onTransactionProccess]);
 
 	return { onSubmit: onSubmitInitialize, onAdditionalDetails };
