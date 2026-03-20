@@ -1,64 +1,52 @@
-// Security: CSRF (Cross-Site Request Forgery) protection utilities
-// Validates that requests originate from same-origin contexts
-
-import { headers } from "next/headers";
+import crypto from 'crypto';
+import { timingSafeEqual } from 'crypto';
 
 /**
- * Get the origin from request headers
- * Security: Validate origin header matches expected domain
+ * Generate a secure CSRF token
+ * @returns {string} A URL-safe CSRF token (base64 encoded random bytes)
  */
-export function getRequestOrigin(): string | null {
-  try {
-    const headersList = headers();
-    // Try Referer header first (most reliable)
-    const referer = headersList.get("referer");
-    if (referer) {
-      return new URL(referer).origin;
-    }
-    // Fallback to Origin header
-    return headersList.get("origin");
-  } catch (error) {
-    console.error("[CSRF] Failed to extract origin:", error);
-    return null;
-  }
+export function generateCsrfToken(): string {
+  return crypto.randomBytes(32).toString('base64url');
 }
 
 /**
- * Get expected origin from environment
- * Security: Should match your deployed domain(s)
+ * Validate CSRF token with timing-attack safe comparison
+ * @param {string} tokenFromRequest - CSRF token from request (header or body)
+ * @param {string} tokenFromSession - CSRF token stored in session/cookie
+ * @returns {boolean} True if tokens match, false otherwise
  */
-export function getExpectedOrigin(): string | null {
-  // In production, validate against your deployed domain
-  // For development, allow localhost
-  if (process.env.NODE_ENV === "development") {
-    return process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000";
-  }
-  return process.env.NEXT_PUBLIC_STOREFRONT_URL || null;
-}
-
-/**
- * Validate CSRF for same-origin requests
- * Security: Prevent cross-origin state-changing requests
- */
-export function validateCSRFOrigin(requestOrigin: string | null, expectedOrigin: string | null): boolean {
-  if (!requestOrigin || !expectedOrigin) {
-    // If we can't determine origins, reject as unsafe
+export function validateCsrfToken(tokenFromRequest: string, tokenFromSession: string): boolean {
+  if (!tokenFromRequest || !tokenFromSession) {
     return false;
   }
 
   try {
-    const requestUrl = new URL(requestOrigin);
-    const expectedUrl = new URL(expectedOrigin);
-
-    // Validate hostname matches (prevent subdomain takeover attacks)
-    if (requestUrl.hostname !== expectedUrl.hostname) {
-      console.warn(`[CSRF] Origin mismatch: ${requestUrl.hostname} vs ${expectedUrl.hostname}`);
+    const requestBuffer = Buffer.from(tokenFromRequest, 'utf-8');
+    const sessionBuffer = Buffer.from(tokenFromSession, 'utf-8');
+    
+    if (requestBuffer.length !== sessionBuffer.length) {
       return false;
     }
-
-    return true;
-  } catch (error) {
-    console.error("[CSRF] Failed to validate origin:", error);
+    
+    return timingSafeEqual(requestBuffer, sessionBuffer);
+  } catch {
     return false;
   }
+}
+
+/**
+ * Extract CSRF token from request headers with fallback to body
+ * @param {any} request - NextJS Request object
+ * @returns {string | null} CSRF token or null if not found
+ */
+export function extractCsrfToken(request: any): string | null {
+  const headerToken = request.headers.get?.('x-csrf-token') || 
+                      request.headers['x-csrf-token'];
+  
+  if (headerToken) {
+    return headerToken;
+  }
+  
+  // Note: For body tokens, extract during JSON parsing in calling code
+  return null;
 }
