@@ -42,14 +42,21 @@ export function sanitizeInput(input: string): string {
     return '';
   }
   
+  // Validate before processing
+  if (input.length === 0) return '';
+  if (input.length > 5000) {
+    throw new Error('Input exceeds maximum length');
+  }
+  
   return input
     .trim()
-    .replace(/[<>"']/g, (char) => {
+    .replace(/[<>"'`]/g, (char) => {
       const escapeMap: { [key: string]: string } = {
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
         "'": '&#x27;',
+        '`': '&#x60;',
       };
       return escapeMap[char] || char;
     })
