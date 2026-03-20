@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
+import { validateCsrfToken } from "@/lib/auth/csrf";
+import { isValidEmail, sanitizeInput, validateRequestBody } from "@/lib/auth/input-validator";
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
@@ -26,15 +28,43 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
+	// Validate CSRF token from request headers
+	const sessionCsrfToken = request.headers.get("x-csrf-token");
+	if (!sessionCsrfToken) {
+		return NextResponse.json(
+			{ errors: [{ message: "CSRF token missing", code: "CSRF_MISSING" }] },
+			{ status: 403 },
+		);
+	}
+
 	const body = (await request.json()) as ResetPasswordRequest;
 	const { email, channel, redirectUrl } = body;
 
-	if (!email || !channel || !redirectUrl) {
+	// Validate CSRF token from request body
+	if (!validateCsrfToken(body as any, sessionCsrfToken)) {
 		return NextResponse.json(
-			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
+			{ errors: [{ message: "Invalid CSRF token", code: "CSRF_INVALID" }] },
+			{ status: 403 },
+		);
+	}
+
+	// Validate and sanitize email
+	if (!email || !isValidEmail(email)) {
+		return NextResponse.json(
+			{ errors: [{ message: "Valid email is required", code: "INVALID_EMAIL" }] },
 			{ status: 400 },
 		);
 	}
+
+	// Validate required fields
+	if (!channel || !redirectUrl) {
+		return NextResponse.json(
+			{ errors: [{ message: "Channel and redirectUrl are required", code: "REQUIRED" }] },
+			{ status: 400 },
+		);
+	}
+
+	const sanitizedEmail = sanitizeInput(email);
 
 	const result = await executeRawGraphQL<RequestPasswordResetResult>({
 		query: REQUEST_PASSWORD_RESET_MUTATION,

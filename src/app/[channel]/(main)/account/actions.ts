@@ -1,6 +1,41 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+
+// Error handling utilities
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("timeout") ||
+      message.includes("econnreset") ||
+      message.includes("enotfound") ||
+      message.includes("429") ||
+      message.includes("503")
+    );
+  }
+  return false;
+}
+
+async function executeWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  delayMs: number = 500
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableError(error) || attempt === maxRetries) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs * Math.pow(2, attempt)));
+    }
+  }
+  throw lastError;
+}
 import {
 	AccountUpdateDocument,
 	PasswordChangeDocument,
@@ -22,10 +57,12 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
 	const firstName = getFormString(formData, "firstName");
 	const lastName = getFormString(formData, "lastName");
 
-	const result = await executeAuthenticatedGraphQL(AccountUpdateDocument, {
-		variables: { input: { firstName, lastName } },
-		cache: "no-cache",
-	});
+	const result = await executeWithRetry(() =>
+		executeAuthenticatedGraphQL(AccountUpdateDocument, {
+			variables: { input: { firstName, lastName } },
+			cache: "no-cache",
+		})
+	);
 
 	if (!result.ok) {
 		return { success: false, error: result.error.message };

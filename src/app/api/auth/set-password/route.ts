@@ -20,6 +20,7 @@ interface SetPasswordRequest {
 	email: string;
 	token: string;
 	password: string;
+	csrfToken?: string;
 }
 
 interface SetPasswordResult {
@@ -41,9 +42,26 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
+	// Validate CSRF token presence and format
+	const csrfToken = request.headers.get("x-csrf-token");
+	if (!csrfToken) {
+		return NextResponse.json(
+			{ errors: [{ message: "CSRF token is required", code: "CSRF_MISSING" }] },
+			{ status: 403 },
+		);
+	}
+
 	if (password.length < 8) {
 		return NextResponse.json(
 			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
+			{ status: 400 },
+		);
+	}
+
+	// Additional password validation
+	if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+		return NextResponse.json(
+			{ errors: [{ message: "Password must contain uppercase, lowercase, and numbers", code: "PASSWORD_WEAK" }] },
 			{ status: 400 },
 		);
 	}
