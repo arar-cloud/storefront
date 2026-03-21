@@ -31,6 +31,7 @@ interface SetPasswordResult {
 }
 
 export async function POST(request: NextRequest) {
+  try {
 	const body = (await request.json()) as SetPasswordRequest;
 	const { email, token, password } = body;
 
@@ -102,4 +103,12 @@ export async function POST(request: NextRequest) {
 		{ errors: [{ message: "Failed to set password", code: "UNKNOWN" }] },
 		{ status: 500 },
 	);
+  } catch (error) {
+    console.error('[set-password] Unhandled error:', error);
+    const statusCode = error instanceof Error && error.message.includes('validation') ? 400 : 500;
+    return NextResponse.json(
+      { error: 'Set password failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: statusCode }
+    );
+  }
 }

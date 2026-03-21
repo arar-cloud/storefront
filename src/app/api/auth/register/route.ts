@@ -1,3 +1,17 @@
+interface ErrorResponse {
+  error: string;
+  code?: string;
+  retryable?: boolean;
+}
+
+function isRetryableError(error: any): boolean {
+  // Network errors and timeouts are retryable
+  if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') return true;
+  // 5xx errors are retryable
+  if (error?.status >= 500) return true;
+  return false;
+}
+
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
@@ -34,6 +48,7 @@ interface AccountRegisterResult {
 }
 
 export async function POST(request: NextRequest) {
+  try {
 	const body = (await request.json()) as RegisterRequest;
 	const { email, password, firstName, lastName, channel, redirectUrl } = body;
 
@@ -80,4 +95,12 @@ export async function POST(request: NextRequest) {
 		user: accountRegister?.user,
 		message: "Account created successfully. Please check your email to verify your account.",
 	});
+  } catch (error) {
+    console.error('[register] Unhandled error:', error);
+    const statusCode = error instanceof Error && error.message.includes('validation') ? 400 : 500;
+    return NextResponse.json(
+      { error: 'Registration failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: statusCode }
+    );
+  }
 }

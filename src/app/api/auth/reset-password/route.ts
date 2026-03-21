@@ -26,7 +26,8 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as ResetPasswordRequest;
+	try {
+		const body = (await request.json()) as ResetPasswordRequest;
 	const { email, channel, redirectUrl } = body;
 
 	if (!email || !channel || !redirectUrl) {
@@ -58,6 +59,14 @@ export async function POST(request: NextRequest) {
 		// Still return success to prevent email enumeration
 	}
 
-	// Always return success to prevent email enumeration
-	return NextResponse.json({ success: true });
+		// Always return success to prevent email enumeration
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error('[reset-password] Unhandled error:', error);
+		const statusCode = error instanceof Error && error.message.includes('validation') ? 400 : 500;
+		return NextResponse.json(
+			{ error: 'Password reset failed', details: error instanceof Error ? error.message : 'Unknown error' },
+			{ status: statusCode }
+		);
+	}
 }
