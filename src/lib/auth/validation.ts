@@ -29,7 +29,7 @@ export interface SetPasswordInput {
  * Security: Reject emails with suspicious patterns
  */
 export function validateEmail(email: unknown): email is string {
-  if (typeof email !== "string") return false;
+  if (!email || typeof email !== "string") return false;
   if (email.length === 0 || email.length > 254) return false;
   return EMAIL_REGEX.test(email);
 }
@@ -39,10 +39,12 @@ export function validateEmail(email: unknown): email is string {
  * Security: Enforce minimum length, reject common weak patterns
  */
 export function validatePassword(password: unknown): password is string {
-  if (typeof password !== "string") return false;
+  if (!password || typeof password !== "string") return false;
   if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
     return false;
   }
+  // Additional defensive check: ensure password is not empty after trim
+  if (password.trim().length === 0) return false;
   // Reject passwords that are just repeated characters (weak entropy)
   if (/^(.)\1+$/.test(password)) return false;
   return true;
