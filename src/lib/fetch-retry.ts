@@ -11,6 +11,10 @@ interface RetryOptions {
 	baseDelay?: number;
 	/** Maximum delay cap in ms for exponential backoff (default: 5000) */
 	maxDelay?: number;
+	/** Backoff multiplier for exponential calculation (default: 2) */
+	backoffMultiplier?: number;
+	/** Add randomized jitter to prevent thundering herd (default: true) */
+	jitter?: boolean;
 	/** Request timeout in ms (default: 30000) */
 	timeout?: number;
 	/** Custom retryable status codes (default: [408, 429, 500, 502, 503, 504]) */
@@ -20,14 +24,23 @@ interface RetryOptions {
 type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 /** Wrap fetch with automatic retry for transient failures (network errors, 5xx). */
-function calculateBackoff(attempt: number, baseDelay: number, maxDelay: number): number {
-	const exponential = Math.pow(2, attempt) * baseDelay;
-	return Math.min(exponential, maxDelay);
+function calculateBackoff(
+	attempt: number,
+	baseDelay: number,
+	maxDelay: number,
+	multiplier: number = 2,
+	useJitter: boolean = true,
+): number {
+	const exponential = Math.pow(multiplier, attempt) * baseDelay;
+	const capped = Math.min(exponential, maxDelay);
+	if (!useJitter) return capped;
+	// Add jitter: 50-100% of calculated delay to prevent thundering herd
+	return capped * (0.5 + Math.random() * 0.5);
 }
 
 export function withRetry(
 	baseFetch: FetchFn,
-	{ maxRetries = 3, baseDelay = 500, maxDelay = 5000, timeout = 30000, retryableStatusCodes }: RetryOptions = {},
+	{ maxRetries = 3, baseDelay = 500, maxDelay = 5000, backoffMultiplier = 2, jitter = true, timeout = 30000, retryableStatusCodes }: RetryOptions = {},
 ): FetchFn {
 	const statusCodesToRetry = retryableStatusCodes ? new Set(retryableStatusCodes) : RETRYABLE_STATUS_CODES;
 
@@ -48,7 +61,7 @@ export function withRetry(
 
 				// Retry on transient server errors
 				if (statusCodesToRetry.has(response.status) && attempt < maxRetries) {
-					await sleep(calculateBackoff(attempt, baseDelay, maxDelay));
+					await sleep(calculateBackoff(attempt, baseDelay, maxDelay, backoffMultiplier, jitter));
 					continue;
 				}
 
@@ -58,7 +71,7 @@ export function withRetry(
 
 				// Retry on network errors and timeouts
 				if (attempt < maxRetries) {
-					await sleep(calculateBackoff(attempt, baseDelay, maxDelay));
+					await sleep(calculateBackoff(attempt, baseDelay, maxDelay, backoffMultiplier, jitter));
 					continue;
 				}
 			}
