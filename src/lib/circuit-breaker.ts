@@ -13,7 +13,9 @@ export interface CircuitBreakerConfig {
   failureThreshold?: number; // Failures before opening
   successThreshold?: number; // Successes before closing from half-open
   timeout?: number; // Time in ms before attempting recovery
+  halfOpenTimeout?: number; // Max time to stay in half-open state
   name?: string;
+  onStateChange?: (from: CircuitState, to: CircuitState) => void; // State transition callback
 }
 
 interface CircuitBreakerState {
@@ -35,6 +37,7 @@ class CircuitBreaker {
       failureThreshold: config.failureThreshold ?? 5,
       successThreshold: config.successThreshold ?? 2,
       timeout: config.timeout ?? 60000, // 1 minute
+      halfOpenTimeout: config.halfOpenTimeout ?? 30000, // 30 seconds max in half-open
       name: this.name,
     };
 
@@ -47,6 +50,22 @@ class CircuitBreaker {
     };
   }
 
+  private transitionState(newState: CircuitState): void {
+    if (this.state.state !== newState) {
+      const oldState = this.state.state;
+      this.state.state = newState;
+      if (this.config.onStateChange) {
+        this.config.onStateChange(oldState, newState);
+      }
+    }
+  }
+
+  private isHalfOpenExpired(): boolean {
+    if (this.state.state !== CircuitState.HALF_OPEN) return false;
+    if (!this.state.lastFailureTime) return false;
+    return Date.now() - this.state.lastFailureTime > (this.config.halfOpenTimeout || 30000);
+  }
+
   async execute<T>(
     fn: () => Promise<T>
   ): Promise<T> {
@@ -56,13 +75,20 @@ class CircuitBreaker {
         this.state.nextAttemptTime &&
         Date.now() >= this.state.nextAttemptTime
       ) {
-        this.state.state = CircuitState.HALF_OPEN;
+        this.transitionState(CircuitState.HALF_OPEN);
         this.state.successes = 0;
       } else {
         throw new Error(
           `Circuit breaker ${this.name} is OPEN. Retryable.`
         );
       }
+    }
+
+    // Force back to OPEN if half-open timeout expires
+    if (this.isHalfOpenExpired()) {
+      this.transitionState(CircuitState.OPEN);
+      this.state.nextAttemptTime = Date.now() + this.config.timeout;
+      throw new Error(`Circuit breaker ${this.name} half-open timeout expired.`);
     }
 
     try {
