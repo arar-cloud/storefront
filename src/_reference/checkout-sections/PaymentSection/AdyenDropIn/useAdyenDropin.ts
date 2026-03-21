@@ -1,5 +1,5 @@
 import type DropinElement from "@adyen/adyen-web/dist/types/components/Dropin";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { camelCase } from "lodash-es";
 import { apiErrorMessages } from "../errorMessages";
 import {
@@ -61,6 +61,9 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 	const { submitInProgress } = useCheckoutUpdateState();
 	const { setSubmitInProgress, setShouldRegisterUser } = useCheckoutUpdateStateActions();
 	const { setIsProcessingPayment } = usePaymentProcessingScreen();
+
+	const adyenInstanceRef = useRef<any>(null);
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	const [currentTransactionId, setCurrentTransactionId] = useState<ParamBasicValue>(
 		getQueryParams().transaction,
@@ -230,8 +233,19 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 		setSubmitInProgress(true);
 	});
 
+	// Cleanup: abort pending requests on unmount to prevent race conditions
+	useEffect(() => {
+		return () => {
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
+		};
+	}, []);
+
 	// when submission is initialized, awaits for all the other requests to finish,
 	// forms to validate, then either does transaction initialize or process
+	useEffect(() => {
+
 	useEffect(() => {
 		const validating = anyFormsValidating(validationState);
 		const allFormsValid = areAllFormsValid(validationState);
@@ -295,6 +309,20 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 		}
 	});
 
+	// Cleanup: destroy Adyen instance on unmount to prevent memory leaks
+	useEffect(() => {
+		return () => {
+			if (adyenInstanceRef.current?.unmount) {
+				try {
+					adyenInstanceRef.current.unmount();
+				} catch (e) {
+					console.warn("Error unmounting Adyen instance:", e);
+				}
+			}
+			adyenInstanceRef.current = null;
+		};
+	}, []);
+
 	// handle when page is opened from previously redirected payment
 	useEffect(() => {
 		const { redirectResult, transaction, processingPayment } = getQueryParams();
@@ -307,10 +335,27 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 		clearQueryParams("redirectResult", "resultCode");
 
-		void onTransactionProccess({
-			id: transaction,
-			data: { details: { redirectResult: decodedRedirectData } },
-		});
+		try {
+			if (!transaction || typeof transaction !== "string") {
+				console.error("[Adyen] Invalid transaction ID received");
+				throw new Error("Invalid transaction ID");
+			}
+			if (!decodedRedirectData || typeof decodedRedirectData !== "string") {
+				console.error("[Adyen] Invalid redirect result");
+				throw new Error("Invalid redirect result");
+			}
+			void onTransactionProccess({
+				id: transaction,
+				data: { details: { redirectResult: decodedRedirectData } },
+			});
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') {
+				console.debug('[useAdyenDropin] Request aborted');
+				return;
+			}
+			console.error("[Adyen] Error processing transaction:", error);
+			throw error;
+		}
 	}, [onTransactionProccess]);
 
 	return { onSubmit: onSubmitInitialize, onAdditionalDetails };

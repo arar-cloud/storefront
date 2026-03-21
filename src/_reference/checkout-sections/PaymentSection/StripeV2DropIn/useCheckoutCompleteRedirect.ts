@@ -92,5 +92,10 @@ export const useCheckoutCompleteRedirect = () => {
 		};
 
 		void processAndComplete();
+
+		// Cleanup: clear any pending operations on unmount to prevent memory leaks
+		return () => {
+			isProcessingRef.current = false;
+		};
 	}, [completingCheckout, onCheckoutComplete, processingTransaction, transactionProcess, stripe]);
 };

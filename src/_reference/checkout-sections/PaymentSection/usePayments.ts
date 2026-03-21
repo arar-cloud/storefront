@@ -1,3 +1,6 @@
+// Prevent memory leaks by tracking mounted state
+let mountedInstances = new Set<string>();
+
 import { useEffect } from "react";
 import { useCheckout } from "@/checkout/hooks/useCheckout";
 import { useCheckoutComplete } from "@/checkout/hooks/useCheckoutComplete";

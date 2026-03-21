@@ -47,11 +47,26 @@ const createServerCookieStorage = async () => {
 	};
 };
 
-export const getServerAuthClient = async () => {
-	const serverCookieStorage = await createServerCookieStorage();
-	return createSaleorAuthClient({
-		saleorApiUrl,
-		refreshTokenStorage: serverCookieStorage,
-		accessTokenStorage: serverCookieStorage,
-	});
+export const getServerAuthClient = async (retryCount = 0) => {
+	const maxRetries = 2;
+	try {
+		const serverCookieStorage = await createServerCookieStorage();
+		if (!serverCookieStorage) {
+			throw new Error("Failed to initialize cookie storage");
+		}
+		return createSaleorAuthClient({
+			saleorApiUrl,
+			refreshTokenStorage: serverCookieStorage,
+			accessTokenStorage: serverCookieStorage,
+		});
+	} catch (error) {
+		if (retryCount < maxRetries) {
+			// Exponential backoff: 100ms, 200ms
+			await new Promise(resolve => setTimeout(resolve, 100 * (retryCount + 1)));
+			return getServerAuthClient(retryCount + 1);
+		}
+		// Log and re-throw after retries exhausted
+		console.error("[Auth] Failed to initialize server auth client:", error);
+		throw error;
+	}
 };

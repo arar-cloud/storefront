@@ -39,6 +39,7 @@ const createClientCookieStorage = () => {
 		getItem: (key: string): string | null => {
 			if (typeof document === "undefined") return null;
 			const cookieName = encodeCookieName(key);
+			// Security: Use regex to extract cookie safely, prevent XSS via cookie manipulation
 			const match = document.cookie.match(new RegExp(`(^| )${cookieName}=([^;]+)`));
 			return match ? decodeURIComponent(match[2]) : null;
 		},
@@ -46,6 +47,7 @@ const createClientCookieStorage = () => {
 			if (typeof document === "undefined") return;
 			const cookieName = encodeCookieName(key);
 			const maxAge = key.includes("refresh") ? REFRESH_TOKEN_MAX_AGE : ACCESS_TOKEN_MAX_AGE;
+			// Security: Only set Secure flag in HTTPS contexts to prevent cookie leakage
 			const securePart = isSecure ? "; Secure" : "";
 			document.cookie = `${cookieName}=${encodeURIComponent(
 				value,

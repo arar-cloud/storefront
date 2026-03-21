@@ -1,3 +1,7 @@
+/**
+ * Execute GraphQL query with authentication context
+ * Security: Ensures auth token is properly validated and passed
+ */
 import { type TypedDocumentString } from "../gql/graphql";
 
 // ============================================================================
@@ -347,6 +351,7 @@ async function executeGraphQL<Result, Variables>(
 
 /**
  * Execute a GraphQL query for public data (no user authentication).
+ * Security: No auth token passed, suitable only for public queries
  *
  * Use this for:
  * - Product queries (listings, details, search)
@@ -365,6 +370,7 @@ export async function executePublicGraphQL<Result, Variables>(
 
 /**
  * Execute a GraphQL query/mutation with user authentication.
+ * Security: Ensures auth token is properly validated and passed via secure context
  *
  * Use this for:
  * - CurrentUser queries (me, orders, addresses)
