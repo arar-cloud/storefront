@@ -26,19 +26,42 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
+	// Verify request origin for CSRF protection
+	const origin = request.headers.get('origin');
+	const host = request.headers.get('host');
+	if (origin && host && !origin.includes(host)) {
+		return NextResponse.json(
+			{ errors: [{ message: "Invalid origin", code: "FORBIDDEN" }] },
+			{ status: 403 },
+		);
+	}
+
 	const body = (await request.json()) as ResetPasswordRequest;
 	const { email, channel, redirectUrl } = body;
 
-	if (!email || !channel || !redirectUrl) {
+	// Sanitize and validate inputs
+	const sanitizedEmail = email?.trim().toLowerCase();
+	const sanitizedChannel = channel?.trim();
+
+	if (!sanitizedEmail || !sanitizedChannel || !redirectUrl) {
 		return NextResponse.json(
 			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
 			{ status: 400 },
 		);
 	}
 
+	// Validate email format to prevent injection attacks
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	if (!emailRegex.test(sanitizedEmail)) {
+		return NextResponse.json(
+			{ errors: [{ message: "Invalid email format", code: "INVALID_EMAIL" }] },
+			{ status: 400 },
+		);
+	}
+
 	const result = await executeRawGraphQL<RequestPasswordResetResult>({
 		query: REQUEST_PASSWORD_RESET_MUTATION,
-		variables: { email, channel, redirectUrl },
+		variables: { email: sanitizedEmail, channel: sanitizedChannel, redirectUrl },
 	});
 
 	// Network or GraphQL error

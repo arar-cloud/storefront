@@ -41,9 +41,31 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
+	// Security: Validate password strength (prevent weak passwords)
 	if (password.length < 8) {
 		return NextResponse.json(
 			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
+			{ status: 400 },
+		);
+	}
+
+	// Additional password strength checks (uppercase, lowercase, numbers, symbols)
+	const hasUppercase = /[A-Z]/.test(password);
+	const hasLowercase = /[a-z]/.test(password);
+	const hasNumbers = /[0-9]/.test(password);
+	const hasSymbols = /[!@#$%^&*]/.test(password);
+
+	if (!hasUppercase || !hasLowercase || !hasNumbers || !hasSymbols) {
+		return NextResponse.json(
+			{ errors: [{ message: "Password must contain uppercase, lowercase, numbers, and symbols", code: "PASSWORD_WEAK" }] },
+			{ status: 400 },
+		);
+	}
+
+	// Security: Validate token format before execution (no eval, safe string operations only)
+	if (!/^[A-Za-z0-9+/=]+$/.test(token)) {
+		return NextResponse.json(
+			{ errors: [{ message: "Invalid token format", code: "INVALID_TOKEN" }] },
 			{ status: 400 },
 		);
 	}
