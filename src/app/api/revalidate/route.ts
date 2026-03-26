@@ -1,3 +1,21 @@
+// Whitelist of allowed tags to prevent arbitrary tag injection
+const ALLOWED_TAGS = new Set(["product", "category", "collection", "home", "products", "categories", "collections", "checkout"]);
+
+// Whitelist of allowed path prefixes to prevent path traversal
+const ALLOWED_PATH_PREFIXES = ["/default-channel/", "/en/", "/fr/"];
+
+function validateTag(tag: string): boolean {
+	if (!tag || typeof tag !== "string") return false;
+	const [prefix] = tag.split(":");
+	return ALLOWED_TAGS.has(prefix);
+}
+
+function validatePath(path: string): boolean {
+	if (!path || typeof path !== "string") return false;
+	if (path.includes("..")) return false; // Prevent path traversal
+	return ALLOWED_PATH_PREFIXES.some((p) => path.startsWith(p));
+}
+
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
@@ -335,8 +353,9 @@ export async function GET(request: NextRequest) {
 	}
 
 	if (tag) {
-		// Profile defaults to "minutes" but can be overridden for navigation ("hours")
-		const profile = searchParams.get("profile") || "minutes";
+		// Profile validation: only allow "minutes" or "hours" to prevent injection
+		const profileParam = searchParams.get("profile");
+		const profile = profileParam === "hours" ? "hours" : "minutes";
 		revalidateTag(tag, profile);
 		revalidatedTags.push(tag);
 	}
