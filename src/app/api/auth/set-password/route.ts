@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
 const SET_PASSWORD_MUTATION = `
@@ -16,6 +17,12 @@ const SET_PASSWORD_MUTATION = `
   }
 `;
 
+const setPasswordSchema = z.object({
+  email: z.string().email("Invalid email"),
+  token: z.string().min(20).max(500, "Invalid token"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password too long"),
+});
+
 interface SetPasswordRequest {
 	email: string;
 	token: string;
@@ -31,22 +38,12 @@ interface SetPasswordResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as SetPasswordRequest;
-	const { email, token, password } = body;
-
-	if (!email || !token || !password) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email, token, and password are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
-
-	if (password.length < 8) {
-		return NextResponse.json(
-			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
-			{ status: 400 },
-		);
-	}
+	try {
+		const body = (await request.json()) as SetPasswordRequest;
+		
+		// Validate input against schema
+		const validatedData = setPasswordSchema.parse(body);
+		const { email, token, password } = validatedData;
 
 	const result = await executeRawGraphQL<SetPasswordResult>({
 		query: SET_PASSWORD_MUTATION,
