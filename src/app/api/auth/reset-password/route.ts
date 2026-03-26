@@ -3,6 +3,12 @@ import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input", issues: error.issues },
+        { status: 400 }
+      );
+    }
     requestPasswordReset(email: $email, channel: $channel, redirectUrl: $redirectUrl) {
       errors {
         field

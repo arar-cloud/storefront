@@ -9,6 +9,12 @@ const REGISTER_MUTATION = `
         email
       }
       errors {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input", issues: error.issues },
+        { status: 400 }
+      );
+    }
         field
         message
         code

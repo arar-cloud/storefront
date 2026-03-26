@@ -326,6 +326,18 @@ export async function GET(request: NextRequest) {
 		return Response.json({ error: "Provide path and/or tag parameter" }, { status: 400 });
 	}
 
+	// Validate path parameter to prevent injection attacks
+	if (path && !/^[\/a-zA-Z0-9_\-\.]+$/.test(path)) {
+		console.warn(`[Revalidate] Invalid path format: ${path}`);
+		return Response.json({ error: "Invalid path format" }, { status: 400 });
+	}
+
+	// Validate tag parameter to prevent injection attacks
+	if (tag && !/^[a-zA-Z0-9_\-:]+$/.test(tag)) {
+		console.warn(`[Revalidate] Invalid tag format: ${tag}`);
+		return Response.json({ error: "Invalid tag format" }, { status: 400 });
+	}
+
 	const revalidatedPaths: string[] = [];
 	const revalidatedTags: string[] = [];
 
@@ -337,6 +349,10 @@ export async function GET(request: NextRequest) {
 	if (tag) {
 		// Profile defaults to "minutes" but can be overridden for navigation ("hours")
 		const profile = searchParams.get("profile") || "minutes";
+		if (!/^[a-zA-Z]+$/.test(profile)) {
+			console.warn(`[Revalidate] Invalid profile format: ${profile}`);
+			return Response.json({ error: "Invalid profile format" }, { status: 400 });
+		}
 		revalidateTag(tag, profile);
 		revalidatedTags.push(tag);
 	}
