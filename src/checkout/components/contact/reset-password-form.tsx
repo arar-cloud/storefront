@@ -1,6 +1,7 @@
 "use client";
 
 import { type FC, useState } from "react";
+import validator from "validator";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -38,18 +39,36 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ onSuccess, onBac
 	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState("");
+	const [passwordAttempts, setPasswordAttempts] = useState(0);
+	const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError("");
 
+		// Brute-force rate limiting
+		const now = Date.now();
+		if (lastAttemptTime && now - lastAttemptTime < 2000) {
+			setError("Please wait before trying again");
+			return;
+		}
+
+		if (passwordAttempts >= 5) {
+			setError("Too many attempts. Please try again later.");
+			return;
+		}
+
 		if (password.length < 8) {
 			setError("Password must be at least 8 characters");
+			setPasswordAttempts(prev => prev + 1);
+			setLastAttemptTime(now);
 			return;
 		}
 
 		if (password !== confirmPassword) {
 			setError("Passwords do not match");
+			setPasswordAttempts(prev => prev + 1);
+			setLastAttemptTime(now);
 			return;
 		}
 
@@ -57,6 +76,12 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ onSuccess, onBac
 
 		if (!passwordResetToken) {
 			setError("Invalid or expired reset link");
+			return;
+		}
+
+		// Validate email format from query params
+		if (passwordResetEmail && !validator.isEmail(passwordResetEmail)) {
+			setError("Invalid email in reset link");
 			return;
 		}
 
@@ -72,6 +97,9 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ onSuccess, onBac
 				const err = result.data.setPassword.errors[0];
 				setError(err.message || "Failed to reset password");
 			} else if (result.data?.setPassword?.token) {
+				// Reset attempt counters on success
+				setPasswordAttempts(0);
+				setLastAttemptTime(null);
 				// Clear the URL params
 				const newQuery = createQueryString(searchParams, {
 					passwordResetToken: null,
@@ -81,6 +109,8 @@ export const ResetPasswordForm: FC<ResetPasswordFormProps> = ({ onSuccess, onBac
 				onSuccess();
 			} else {
 				setError("Failed to reset password. The link may have expired.");
+				setPasswordAttempts(prev => prev + 1);
+				setLastAttemptTime(now);
 			}
 		} catch {
 			setError("An error occurred. Please try again.");

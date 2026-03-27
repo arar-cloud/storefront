@@ -1,6 +1,7 @@
 "use client";
 
 import { type FC, useState } from "react";
+import validator from "validator";
 import { Mail, Lock, Eye, EyeOff, Info } from "lucide-react";
 import { Label } from "@/ui/components/ui/label";
 import { Checkbox } from "@/ui/components/ui/checkbox";
@@ -79,9 +80,10 @@ export const GuestContact: FC<GuestContactProps> = ({
 						type="email"
 						placeholder="Email address"
 						value={email}
-						onChange={(e) => onEmailChange(e.target.value)}
+						onChange={(e) => onEmailChange(validator.trim(e.target.value))}
 						onBlur={onEmailBlur}
 						autoComplete="email"
+						spellCheck="false"
 						className={cn("h-12 pl-10", emailError && "border-destructive")}
 						aria-invalid={!!emailError}
 						aria-describedby={emailError ? "email-error" : undefined}

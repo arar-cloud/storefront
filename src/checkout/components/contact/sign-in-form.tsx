@@ -3,6 +3,7 @@
 import { type FC, useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
+import validator from "validator";
 import { Button } from "@/ui/components/ui/button";
 import { Input } from "@/ui/components/ui/input";
 import { useRequestPasswordResetMutation } from "@/checkout/graphql";
@@ -37,13 +38,35 @@ export const SignInForm: FC<SignInFormProps> = ({
 	const [, requestPasswordReset] = useRequestPasswordResetMutation();
 	const [email, setEmail] = useState(initialEmail);
 	const [password, setPassword] = useState("");
+	const [emailError, setEmailError] = useState("");
+	const [passwordError, setPasswordError] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
 	const [passwordResetSent, setPasswordResetSent] = useState(false);
 
-	const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+	const validateEmail = (value: string) => validator.isEmail(value);
+
+	const handleEmailChange = (value: string) => {
+		const trimmed = validator.trim(value);
+		setEmail(trimmed);
+		if (trimmed && !validator.isEmail(trimmed)) {
+			setEmailError("Invalid email address");
+		} else {
+			setEmailError("");
+		}
+		setPasswordResetSent(false);
+	};
+
+	const handlePasswordChange = (value: string) => {
+		setPassword(value);
+		if (value && value.length < 6) {
+			setPasswordError("Password must be at least 6 characters");
+		} else {
+			setPasswordError("");
+		}
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
