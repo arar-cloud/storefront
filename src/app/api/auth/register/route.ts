@@ -1,3 +1,6 @@
+import { registerSchema } from '@/lib/validation/schemas';
+import { z } from 'zod';
+
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
@@ -34,15 +37,36 @@ interface AccountRegisterResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as RegisterRequest;
-	const { email, password, firstName, lastName, channel, redirectUrl } = body;
-
-	if (!email || !password) {
+	let body;
+	try {
+		body = (await request.json()) as RegisterRequest;
+	} catch {
 		return NextResponse.json(
-			{ errors: [{ message: "Email and password are required", code: "REQUIRED" }] },
+			{ errors: [{ message: "Invalid JSON", code: "INVALID_JSON" }] },
 			{ status: 400 },
 		);
 	}
+
+	// Validate input against schema
+	try {
+		registerSchema.parse(body);
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			return NextResponse.json(
+				{
+					errors: error.errors.map(e => ({
+						message: e.message,
+						field: e.path.join('.'),
+						code: 'VALIDATION_ERROR'
+					}))
+				},
+				{ status: 400 },
+			);
+		}
+		throw error;
+	}
+
+	const { email, password, firstName, lastName, channel, redirectUrl } = body;
 
 	const result = await executeRawGraphQL<AccountRegisterResult>({
 		query: REGISTER_MUTATION,

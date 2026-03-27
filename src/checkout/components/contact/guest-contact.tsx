@@ -2,6 +2,8 @@
 
 import { type FC, useState } from "react";
 import { Mail, Lock, Eye, EyeOff, Info } from "lucide-react";
+import { contactFormSchema } from "@/lib/validation/schemas";
+import { z } from "zod";
 import { Label } from "@/ui/components/ui/label";
 import { Checkbox } from "@/ui/components/ui/checkbox";
 import { Input } from "@/ui/components/ui/input";
@@ -32,6 +34,20 @@ export interface GuestContactProps {
 	/** Password validation error */
 	passwordError?: string;
 }
+
+/**
+ * Validates contact form data using the centralized schema.
+ */
+const validateContactForm = (data: unknown) => {
+  try {
+    return contactFormSchema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(error.errors.map(e => e.message).join(", "));
+    }
+    throw error;
+  }
+};
 
 /**
  * Guest checkout contact section.

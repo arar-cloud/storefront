@@ -1,3 +1,22 @@
+import { addressSchema } from '@/lib/validation/schemas';
+import { z } from 'zod';
+
+const validateAddressSchema = (data: unknown) => {
+  try {
+    return addressSchema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors: Record<string, string> = {};
+      error.errors.forEach(err => {
+        const path = err.path.join('.');
+        errors[path] = err.message;
+      });
+      return errors;
+    }
+    throw error;
+  }
+};
+
 import { isEqual, omit, pick, reduce, uniq } from "lodash-es";
 import {
 	type OptionalAddress,
