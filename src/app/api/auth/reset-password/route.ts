@@ -1,3 +1,6 @@
+import { resetPasswordSchema } from '@/lib/validation/schemas';
+import { z } from 'zod';
+
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
@@ -26,7 +29,33 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as ResetPasswordRequest;
+	let body: ResetPasswordRequest;
+	try {
+		body = (await request.json()) as ResetPasswordRequest;
+	} catch {
+		return NextResponse.json(
+			{ errors: [{ message: 'Invalid JSON', code: 'INVALID_JSON' }] },
+			{ status: 400 },
+		);
+	}
+
+	// Validate input against schema
+	try {
+		resetPasswordSchema.parse(body);
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			return NextResponse.json(
+				{ errors: error.errors.map(e => ({ 
+					field: e.path.join('.'), 
+					message: e.message,
+					code: 'VALIDATION_ERROR'
+				})) },
+				{ status: 400 },
+			);
+		}
+		throw error;
+	}
+
 	const { email, channel, redirectUrl } = body;
 
 	if (!email || !channel || !redirectUrl) {
