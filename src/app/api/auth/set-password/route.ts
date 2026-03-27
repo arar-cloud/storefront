@@ -1,3 +1,6 @@
+import { setPasswordSchema } from '@/lib/validation/schemas';
+import { z } from 'zod';
+
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
@@ -31,8 +34,36 @@ interface SetPasswordResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as SetPasswordRequest;
-	const { email, token, password } = body;
+	let body: unknown;
+	try {
+		body = await request.json();
+	} catch {
+		return NextResponse.json(
+			{ errors: [{ message: 'Invalid JSON', code: 'INVALID_JSON' }] },
+			{ status: 400 },
+		);
+	}
+
+	// Validate input against schema
+	try {
+		setPasswordSchema.parse(body);
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			return NextResponse.json(
+				{ 
+					errors: error.errors.map(e => ({ 
+						field: e.path.join('.') || 'unknown',
+						message: e.message,
+						code: 'VALIDATION_ERROR'
+					}))
+				},
+				{ status: 400 },
+			);
+		}
+		throw error;
+	}
+
+	const { email, token, password } = body as SetPasswordRequest;
 
 	if (!email || !token || !password) {
 		return NextResponse.json(
@@ -44,6 +75,14 @@ export async function POST(request: NextRequest) {
 	if (password.length < 8) {
 		return NextResponse.json(
 			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
+			{ status: 400 },
+		);
+	}
+
+	// Validate token format (must be non-empty string)
+	if (typeof token !== 'string' || token.trim().length === 0) {
+		return NextResponse.json(
+			{ errors: [{ message: "Invalid or expired token", code: "INVALID_TOKEN" }] },
 			{ status: 400 },
 		);
 	}
