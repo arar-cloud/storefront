@@ -2,6 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
+function generateCorrelationId(): string {
+	return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+interface LogContext {
+	correlationId: string;
+	operationName: string;
+	timestamp: number;
+}
+
+function createLogger(context: LogContext) {
+	return {
+		info: (message: string, meta?: Record<string, unknown>) =>
+			console.info(
+				JSON.stringify({
+					level: "info",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					...meta,
+				}),
+			),
+		error: (message: string, error?: Error, meta?: Record<string, unknown>) =>
+			console.error(
+				JSON.stringify({
+					level: "error",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					errorMessage: error?.message,
+					errorStack: error?.stack,
+					...meta,
+				}),
+			),
+	};
+}
+
 const SET_PASSWORD_MUTATION = `
   mutation SetPassword($email: String!, $token: String!, $password: String!) {
     setPassword(email: $email, token: $token, password: $password) {
@@ -31,6 +70,13 @@ interface SetPasswordResult {
 }
 
 export async function POST(request: NextRequest) {
+	const correlationId = generateCorrelationId();
+	const logger = createLogger({
+		correlationId,
+		operationName: "SetPassword",
+		timestamp: Date.now(),
+	});
+	logger.info("Set password request initiated", { correlationId });
 	const body = (await request.json()) as SetPasswordRequest;
 	const { email, token, password } = body;
 
@@ -55,7 +101,7 @@ export async function POST(request: NextRequest) {
 
 	// Network or GraphQL error
 	if (!result.ok) {
-		console.error("Set password error:", result.error.type);
+		logger.error("Set password GraphQL error", new Error(result.error.type), { errorType: result.error.type });
 		return NextResponse.json(
 			{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
 			{ status: result.error.type === "network" ? 503 : 400 },
@@ -66,7 +112,7 @@ export async function POST(request: NextRequest) {
 
 	// Saleor validation errors
 	if (setPassword?.errors?.length) {
-		console.error("Set password validation errors");
+		logger.error("Set password validation errors", new Error("Validation failed"), { errorCount: setPassword.errors.length });
 		const validationResult = asValidationError(setPassword.errors);
 		return NextResponse.json({ errors: validationResult.error.validationErrors }, { status: 400 });
 	}

@@ -1,6 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
 
+function generateCorrelationId(): string {
+	return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+interface LogContext {
+	correlationId: string;
+	operationName: string;
+	timestamp: number;
+}
+
+function createLogger(context: LogContext) {
+	return {
+		info: (message: string, meta?: Record<string, unknown>) =>
+			console.info(
+				JSON.stringify({
+					level: "info",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					...meta,
+				}),
+			),
+		error: (message: string, error?: Error, meta?: Record<string, unknown>) =>
+			console.error(
+				JSON.stringify({
+					level: "error",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					errorMessage: error?.message,
+					errorStack: error?.stack,
+					...meta,
+				}),
+			),
+	};
+}
+
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
     requestPasswordReset(email: $email, channel: $channel, redirectUrl: $redirectUrl) {
@@ -26,31 +65,40 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as ResetPasswordRequest;
-	const { email, channel, redirectUrl } = body;
+	const correlationId = generateCorrelationId();
+	const logger = createLogger({
+		correlationId,
+		operationName: "RequestPasswordReset",
+		timestamp: Date.now(),
+	});
 
-	if (!email || !channel || !redirectUrl) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
+	try {
+		const body = (await request.json()) as ResetPasswordRequest;
+		logger.info("Password reset request received", { email: body.email, channel: body.channel });
+		const { email, channel, redirectUrl } = body;
 
-	const result = await executeRawGraphQL<RequestPasswordResetResult>({
+			if (!email || !channel || !redirectUrl) {
+			return NextResponse.json(
+				{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
+				{ status: 400 },
+			);
+		}
+
+		const result = await executeRawGraphQL<RequestPasswordResetResult>({
 		query: REQUEST_PASSWORD_RESET_MUTATION,
 		variables: { email, channel, redirectUrl },
 	});
 
-	// Network or GraphQL error
-	if (!result.ok) {
-		console.error("Password reset error:", result.error.type);
-		return NextResponse.json(
-			{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
-			{ status: result.error.type === "network" ? 503 : 400 },
-		);
-	}
+		// Network or GraphQL error
+		if (!result.ok) {
+			logger.error("GraphQL request failed", result.error, { errorType: result.error.type });
+			return NextResponse.json(
+				{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
+				{ status: result.error.type === "network" ? 503 : 400 },
+			);
+		}
 
-	const requestPasswordReset = result.data.requestPasswordReset;
+		const requestPasswordReset = result.data.requestPasswordReset;
 
 	// Saleor validation errors - log but don't expose to prevent email enumeration
 	if (requestPasswordReset?.errors?.length) {

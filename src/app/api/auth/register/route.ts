@@ -1,6 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 
+// ============================================================================
+// Structured Logging with Correlation IDs
+// ============================================================================
+
+function generateCorrelationId(): string {
+	return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+interface LogContext {
+	correlationId: string;
+	operationName: string;
+	timestamp: number;
+}
+
+function createLogger(context: LogContext) {
+	return {
+		info: (message: string, meta?: Record<string, unknown>) => {
+			console.info(
+				JSON.stringify({
+					level: "info",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					...meta,
+				}),
+			),
+		);
+	},
+		error: (message: string, error?: Error, meta?: Record<string, unknown>) => {
+			console.error(
+				JSON.stringify({
+					level: "error",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					errorMessage: error?.message,
+					errorStack: error?.stack,
+					...meta,
+				}),
+			),
+		);
+	},
+		warn: (message: string, meta?: Record<string, unknown>) => {
+			console.warn(
+				JSON.stringify({
+					level: "warn",
+					message,
+					correlationId: context.correlationId,
+					operation: context.operationName,
+					timestamp: context.timestamp,
+					...meta,
+				}),
+			),
+		);
+	},
+	};
+}
+
 const REGISTER_MUTATION = `
   mutation AccountRegister($input: AccountRegisterInput!) {
     accountRegister(input: $input) {
