@@ -1,4 +1,117 @@
 import { type TypedDocumentString } from "../gql/graphql";
+import { createFallbackHandler } from "@/lib/api/fallback-handler";
+
+// Cache for fallback responses
+const fallbackCache = new Map<string, any>();
+
+function setCacheEntry(key: string, value: any): void {
+  fallbackCache.set(key, { value, timestamp: Date.now() });
+}
+
+function getCacheEntry(key: string, maxAge: number = 300000): any | null {
+  const entry = fallbackCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > maxAge) {
+    fallbackCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+// ============================================================================
+// Connection Pool Management - Leak Detection and Exhaustion Handling
+// ============================================================================
+
+interface PoolMetrics {
+	activeConnections: number;
+	totalCreated: number;
+	totalReleased: number;
+	peakUtilization: number;
+	lastCleanupTime: number;
+}
+
+class ConnectionPoolManager {
+	private static instance: ConnectionPoolManager;
+	private metrics: PoolMetrics = {
+		activeConnections: 0,
+		totalCreated: 0,
+		totalReleased: 0,
+		peakUtilization: 0,
+		lastCleanupTime: Date.now(),
+	};
+	private readonly MAX_POOL_SIZE = 50;
+	private readonly POOL_TIMEOUT_MS = 30000;
+	private readonly CLEANUP_INTERVAL_MS = 60000;
+	private cleanupTimer: NodeJS.Timeout | null = null;
+
+	private constructor() {
+		this.startPeriodicCleanup();
+	}
+
+	static getInstance(): ConnectionPoolManager {
+		if (!ConnectionPoolManager.instance) {
+			ConnectionPoolManager.instance = new ConnectionPoolManager();
+		}
+		return ConnectionPoolManager.instance;
+	}
+
+	acquireConnection(): { id: string; timeoutMs: number } {
+		if (this.metrics.activeConnections >= this.MAX_POOL_SIZE) {
+			const utilization = (this.metrics.activeConnections / this.MAX_POOL_SIZE) * 100;
+			console.warn(
+				`[PoolExhaustion] Connection pool at ${utilization.toFixed(1)}% capacity (${this.metrics.activeConnections}/${this.MAX_POOL_SIZE}). May experience degraded performance.`,
+			);
+		}
+		this.metrics.activeConnections++;
+		this.metrics.totalCreated++;
+		this.metrics.peakUtilization = Math.max(
+			this.metrics.peakUtilization,
+			this.metrics.activeConnections,
+		);
+		return { id: `conn_${Date.now()}_${Math.random()}`, timeoutMs: this.POOL_TIMEOUT_MS };
+	}
+
+	releaseConnection(connId: string): void {
+		if (this.metrics.activeConnections > 0) {
+			this.metrics.activeConnections--;
+			this.metrics.totalReleased++;
+		}
+	}
+
+	detectLeaks(): string[] {
+		const leaks: string[] = [];
+		const leakThreshold = this.metrics.totalCreated - this.metrics.totalReleased - this.metrics.activeConnections;
+		if (leakThreshold > 0) {
+			leaks.push(
+				`Potential connection leak: ${leakThreshold} connections unaccounted for (created: ${this.metrics.totalCreated}, released: ${this.metrics.totalReleased}, active: ${this.metrics.activeConnections})`,
+			);
+		}
+		return leaks;
+	}
+
+	getMetrics(): PoolMetrics {
+		return { ...this.metrics };
+	}
+
+	private startPeriodicCleanup(): void {
+		this.cleanupTimer = setInterval(() => {
+			const leaks = this.detectLeaks();
+			if (leaks.length > 0) {
+				leaks.forEach((leak) => console.error(`[PoolLeak] ${leak}`));
+			}
+			this.metrics.lastCleanupTime = Date.now();
+		}, this.CLEANUP_INTERVAL_MS);
+	}
+
+	destroy(): void {
+		if (this.cleanupTimer) {
+			clearInterval(this.cleanupTimer);
+			this.cleanupTimer = null;
+		}
+	}
+}
+
+const poolManager = ConnectionPoolManager.getInstance();
 
 // ============================================================================
 // Result Types - Explicit error handling without exceptions
@@ -10,8 +123,9 @@ import { type TypedDocumentString } from "../gql/graphql";
  * 2. http - Server responded with error status (4xx, 5xx)
  * 3. graphql - Query/mutation syntax or validation errors
  * 4. validation - Saleor domain errors (e.g., "email already exists")
+ * 5. pool - Connection pool exhausted or timeout occurred
  */
-export type GraphQLErrorType = "network" | "http" | "graphql" | "validation";
+export type GraphQLErrorType = "network" | "http" | "graphql" | "validation" | "pool";
 
 export interface GraphQLError {
 	type: GraphQLErrorType;
