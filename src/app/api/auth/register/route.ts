@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 import { handleIdempotentRequest } from "@/lib/idempotency";
+import { createRateLimiter } from "@/lib/api/rate-limiter";
+import { createRequestTrackingWrapper, incrementTotalErrors } from "@/lib/api/request-tracker";
+
+const authRateLimiter = createRateLimiter({
+  tokensPerInterval: 10,
+  interval: 60000, // 10 requests per minute
+  maxQueueSize: 50,
+  name: 'auth-register',
+});
 
 // ============================================================================
 // Structured Logging with Correlation IDs
@@ -71,6 +80,21 @@ const REGISTER_MUTATION = `
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+	// Apply rate limiting before processing
+	try {
+		await authRateLimiter.acquire();
+	} catch (error) {
+		if (error instanceof Error && error.message.includes('overloaded')) {
+			incrementTotalErrors();
+			return NextResponse.json(
+				{
+					error: 'Service temporarily unavailable - too many requests',
+				},
+				{ status: 429 }
+			);
+		}
+	}
+
 	const correlationId = generateCorrelationId();
 	const logger = createLogger({
 		correlationId,
@@ -197,5 +221,8 @@ export async function POST(request: NextRequest) {
 			},
 			{ status: 500 }
 		);
+	} finally {
+		// Release rate limit token
+		authRateLimiter.release();
 	}
 }
