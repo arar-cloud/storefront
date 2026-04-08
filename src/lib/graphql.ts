@@ -1,4 +1,22 @@
 import { type TypedDocumentString } from "../gql/graphql";
+import { createFallbackHandler } from "@/lib/api/fallback-handler";
+
+// Cache for fallback responses
+const fallbackCache = new Map<string, any>();
+
+function setCacheEntry(key: string, value: any): void {
+  fallbackCache.set(key, { value, timestamp: Date.now() });
+}
+
+function getCacheEntry(key: string, maxAge: number = 300000): any | null {
+  const entry = fallbackCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > maxAge) {
+    fallbackCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
 
 // ============================================================================
 // Connection Pool Management - Leak Detection and Exhaustion Handling
