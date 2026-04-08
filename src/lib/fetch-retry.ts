@@ -1,9 +1,13 @@
 /**
  * Retry wrapper for fetch. Used in urql client setup (Root.tsx, AuthProvider.tsx).
  * Retries on network errors and 5xx responses with exponential backoff + jitter.
- * Includes circuit breaker to prevent cascading failures.
+ * Includes circuit breaker to prevent cascading failures and enforces timeout policies.
  */
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+const DEFAULT_TIMEOUT_MS = 30000; // 30 seconds
+const MAX_TIMEOUT_MS = 120000; // 2 minutes
+const BACKOFF_BASE_MS = 100;
+const MAX_RETRIES = 3;
 
 // ============================================================================
 // Circuit Breaker for Cascading Failure Prevention
@@ -13,6 +17,12 @@ interface CircuitBreakerState {
 	failureCount: number;
 	lastFailureTime: number;
 	isOpen: boolean;
+	halfOpenAttempts: number;
+}
+
+interface FetchRetryOptions {
+	timeoutMs?: number;
+	maxRetries?: number;
 }
 
 class CircuitBreaker {
@@ -21,9 +31,11 @@ class CircuitBreaker {
 		failureCount: 0,
 		lastFailureTime: 0,
 		isOpen: false,
+		halfOpenAttempts: 0,
 	};
 	private readonly FAILURE_THRESHOLD = 5;
-	private readonly RESET_TIMEOUT_MS = 60000;
+	private readonly RESET_TIMEOUT_MS = 60000; // 1 minute
+	private readonly HALF_OPEN_MAX_ATTEMPTS = 1;
 
 	private constructor() {}
 
@@ -46,37 +58,41 @@ class CircuitBreaker {
 	}
 
 	isOpen(): boolean {
-		if (
-			this.state.isOpen &&
-			Date.now() - this.state.lastFailureTime > this.RESET_TIMEOUT_MS
-		) {
+		if (!this.state.isOpen) return false;
+		
+		// Check if we should transition to half-open state
+		if (Date.now() - this.state.lastFailureTime > this.RESET_TIMEOUT_MS) {
 			this.state.isOpen = false;
-			this.state.failureCount = 0;
+			this.state.halfOpenAttempts = 0;
 			console.info("[CircuitBreaker] Closed. Resuming requests.");
+			return false;
 		}
-		return this.state.isOpen;
+		return true;
+	}
+
+	isHalfOpen(): boolean {
+		return !this.state.isOpen && this.state.halfOpenAttempts > 0;
 	}
 
 	recordSuccess(): void {
-		this.state.failureCount = Math.max(0, this.state.failureCount - 1);
+		this.state.failureCount = 0;
+		this.state.isOpen = false;
+		this.state.halfOpenAttempts = 0;
 	}
 }
 
 const circuitBreaker = CircuitBreaker.getInstance();
 
 /**
- * Add jitter to backoff delay to prevent synchronized retry storms
+ * Calculate exponential backoff with jitter
  */
-function addJitter(delay: number): number {
-	const jitterAmount = delay * 0.1 * Math.random();
-	return delay + jitterAmount;
+function getExponentialBackoff(attempt: number): number {
+	const exponential = BACKOFF_BASE_MS * Math.pow(2, attempt);
+	const jitter = exponential * 0.2 * Math.random();
+	return exponential + jitter;
 }
 
-interface RetryOptions {
-	/** Maximum number of retries (default: 2) */
-	maxRetries?: number;
-	/** Base delay in ms, doubles on each retry (default: 500) */
-	baseDelay?: number;
+interface RetryOptions extends FetchRetryOptions {
 	/** Enable circuit breaker (default: true) */
 	enableCircuitBreaker?: boolean;
 }
@@ -89,6 +105,8 @@ export function withRetry(
 	{ maxRetries = 2, baseDelay = 500, enableCircuitBreaker = true }: RetryOptions = {},
 ): FetchFn {
 	return async (input, init) => {
+		const finalMaxRetries = maxRetries ?? MAX_RETRIES;
+		const finalTimeoutMs = Math.min(Math.max(baseDelay ?? DEFAULT_TIMEOUT_MS, 1000), MAX_TIMEOUT_MS);
 		let lastError: Error | null = null;
 
 		// Check circuit breaker before attempting request
@@ -100,16 +118,23 @@ export function withRetry(
 			throw error;
 		}
 
-		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+		for (let attempt = 0; attempt <= finalMaxRetries; attempt++) {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), finalTimeoutMs);
+			
 			try {
-				const response = await baseFetch(input, init);
+				const response = await baseFetch(input, {
+					...init,
+					signal: controller.signal,
+				});
+				clearTimeout(timeoutId);
 				circuitBreaker.recordSuccess();
 
 				// Retry on transient server errors
-				if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < maxRetries) {
-					const delayWithJitter = addJitter(baseDelay * Math.pow(2, attempt));
+				if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < finalMaxRetries) {
+					const delayWithJitter = getExponentialBackoff(attempt);
 					console.warn(
-						`[RetryWithBackoff] Attempt ${attempt + 1}/${maxRetries + 1} failed (status ${response.status}). Retrying in ${delayWithJitter}ms.`,
+						`[RetryWithBackoff] Attempt ${attempt + 1}/${finalMaxRetries + 1} failed (status ${response.status}). Retrying in ${Math.round(delayWithJitter)}ms.`,
 					);
 					await sleep(delayWithJitter);
 					continue;
@@ -117,11 +142,13 @@ export function withRetry(
 
 				return response;
 			} catch (error) {
+				clearTimeout(timeoutId);
 				lastError = error instanceof Error ? error : new Error(String(error));
 
-				// Retry on network errors
-				if (attempt < maxRetries) {
-					await sleep(baseDelay * Math.pow(2, attempt));
+				// Retry on network errors and timeouts
+				if (attempt < finalMaxRetries) {
+					const delayWithJitter = getExponentialBackoff(attempt);
+					await sleep(delayWithJitter);
 					continue;
 				}
 			}
