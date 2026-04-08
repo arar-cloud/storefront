@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
+import { handleIdempotentRequest } from "@/lib/idempotency";
 
 function generateCorrelationId(): string {
 	return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -24,88 +25,146 @@ function createLogger(context: LogContext) {
 					...meta,
 				}),
 			),
-		error: (message: string, error?: Error, meta?: Record<string, unknown>) =>
+		error: (message: string, error?: unknown, meta?: Record<string, unknown>) => {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			const stack = error instanceof Error ? error.stack : undefined;
 			console.error(
 				JSON.stringify({
 					level: "error",
 					message,
+					errorMessage,
+					stack,
 					correlationId: context.correlationId,
 					operation: context.operationName,
 					timestamp: context.timestamp,
-					errorMessage: error?.message,
-					errorStack: error?.stack,
 					...meta,
 				}),
-			),
+			);
+		},
 	};
 }
 
-const REQUEST_PASSWORD_RESET_MUTATION = `
-  mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
-    requestPasswordReset(email: $email, channel: $channel, redirectUrl: $redirectUrl) {
+const RESET_PASSWORD_MUTATION = `
+  mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
+    requestPasswordReset(input: $input) {
       errors {
         field
         message
-        code
       }
     }
   }
 `;
 
-interface ResetPasswordRequest {
-	email: string;
-	channel: string;
-	redirectUrl: string;
-}
-
-interface RequestPasswordResetResult {
-	requestPasswordReset?: {
-		errors?: Array<{ field?: string | null; message: string; code?: string | null }>;
-	};
-}
-
 export async function POST(request: NextRequest) {
 	const correlationId = generateCorrelationId();
 	const logger = createLogger({
 		correlationId,
-		operationName: "RequestPasswordReset",
+		operationName: "POST /api/auth/reset-password",
 		timestamp: Date.now(),
 	});
 
 	try {
-		const body = (await request.json()) as ResetPasswordRequest;
-		logger.info("Password reset request received", { email: body.email, channel: body.channel });
-		const { email, channel, redirectUrl } = body;
+		const idempotencyKey = request.headers.get("idempotency-key");
 
-			if (!email || !channel || !redirectUrl) {
+		logger.info("Reset password request received", {
+			idempotencyKey: idempotencyKey ? "present" : "missing",
+		});
+
+		// Parse request body with timeout
+		let body: unknown;
+		try {
+			body = await Promise.race([
+				request.json(),
+				new Promise((_, reject) =>
+					setTimeout(() => reject(new Error("Request parsing timeout")), 5000)
+				),
+			]);
+		} catch (error) {
+			logger.error("Failed to parse request body", error);
 			return NextResponse.json(
-				{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
-				{ status: 400 },
+				{
+					errors: [{ message: "Invalid request body" }],
+					correlationId,
+				},
+				{ status: 400 }
 			);
 		}
 
-		const result = await executeRawGraphQL<RequestPasswordResetResult>({
-		query: REQUEST_PASSWORD_RESET_MUTATION,
-		variables: { email, channel, redirectUrl },
-	});
-
-		// Network or GraphQL error
-		if (!result.ok) {
-			logger.error("GraphQL request failed", result.error, { errorType: result.error.type });
+		if (!body || typeof body !== "object") {
+			logger.error("Invalid request body structure", null);
 			return NextResponse.json(
-				{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
-				{ status: result.error.type === "network" ? 503 : 400 },
+				{
+					errors: [{ message: "Request body must be a JSON object" }],
+					correlationId,
+				},
+				{ status: 400 }
 			);
 		}
 
-		const requestPasswordReset = result.data.requestPasswordReset;
+		try {
+			const response = await handleIdempotentRequest(
+				idempotencyKey || undefined,
+				async () => {
+					const result = await Promise.race([
+						executeRawGraphQL(RESET_PASSWORD_MUTATION, body as Record<string, unknown>),
+						new Promise((_, reject) =>
+							setTimeout(() => reject(new Error("GraphQL request timeout")), 28000)
+						),
+					]);
 
-	// Saleor validation errors - log but don't expose to prevent email enumeration
-	if (requestPasswordReset?.errors?.length) {
-		console.error("Password reset validation errors");
-		// Still return success to prevent email enumeration
+					if (result.errors?.length) {
+						logger.error("GraphQL errors received", null, {
+							errorCount: result.errors.length,
+						});
+						return { errors: result.errors, data: result.data };
+					}
+
+					logger.info("Password reset request processed");
+					return { errors: [], data: result.data };
+				}
+			);
+
+			if ("error" in response) {
+				logger.error("Idempotency validation failed", null, { error: response.error });
+				return NextResponse.json(
+					{
+						errors: [{ message: response.error }],
+						correlationId,
+					},
+					{ status: 400 }
+				);
+			}
+
+			const status = response.result.errors?.length ? 400 : 200;
+			logger.info("Reset password response sent", { status, cached: response.cached });
+
+			return NextResponse.json(
+				{
+					errors: response.result.errors,
+					data: response.result.data,
+					correlationId,
+					cached: response.cached,
+				},
+				{ status }
+			);
+		} catch (error) {
+			logger.error("Idempotency handler failed", error);
+			return NextResponse.json(
+				{
+					errors: [{ message: "Internal server error" }],
+					correlationId,
+				},
+				{ status: 500 }
+			);
+		}
+	} catch (error) {
+		logger.error("Unhandled error in reset password handler", error);
+		return NextResponse.json(
+			{
+				errors: [{ message: "Internal server error" }],
+				correlationId,
+			},
+			{ status: 500 }
+		);
 	}
-
-	// Always return success to prevent email enumeration
-	return NextResponse.json({ success: true });
 }
