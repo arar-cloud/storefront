@@ -1,4 +1,5 @@
 import { type TypedDocumentString } from "../gql/graphql";
+import { cacheManager, CACHE_TTL_DEFAULTS } from "./cache";
 
 // ============================================================================
 // Result Types - Explicit error handling without exceptions
@@ -10,6 +11,14 @@ import { type TypedDocumentString } from "../gql/graphql";
  * 2. http - Server responded with error status (4xx, 5xx)
  * 3. graphql - Query/mutation syntax or validation errors
  * 4. validation - Saleor domain errors (e.g., "email already exists")
+ */
+
+/**
+ * Cache strategies for query results:
+ * - Stats queries: Cached 1 hour (product/category/order aggregations)
+ * - Detail queries: Cached 10 minutes (product/category details)
+ * - User-specific: Cached 15 minutes with user ID key (orders, addresses)
+ * - Mutations: Invalidate related cache patterns after mutation completes
  */
 export type GraphQLErrorType = "network" | "http" | "graphql" | "validation";
 
