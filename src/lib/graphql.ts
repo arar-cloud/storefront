@@ -1,5 +1,6 @@
 import { type TypedDocumentString } from "../gql/graphql";
 import { cacheManager, CACHE_TTL_DEFAULTS } from "./cache";
+import { createDataLoaders } from "./dataloader";
 
 // ============================================================================
 // Result Types - Explicit error handling without exceptions
