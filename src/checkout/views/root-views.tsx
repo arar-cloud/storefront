@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { SaleorCheckout, CheckoutSkeleton } from "@/checkout/views/saleor-checkout";
 import { OrderConfirmation, OrderConfirmationSkeleton } from "@/checkout/views/order-confirmation";
 import { getQueryParams } from "@/checkout/lib/utils/url";
