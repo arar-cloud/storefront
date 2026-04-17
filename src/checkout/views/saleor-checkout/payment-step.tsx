@@ -42,7 +42,7 @@ interface PaymentStepProps {
 	onGoToInformation?: () => void;
 }
 
-export const PaymentStep: FC<PaymentStepProps> = ({
+const PaymentStepComponent: FC<PaymentStepProps> = ({
 	checkout: initialCheckout,
 	onBack,
 	onComplete,
