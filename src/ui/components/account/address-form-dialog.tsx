@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
+import React from "react";
 import { Plus, Pencil } from "lucide-react";
 import { type AddressDetailsFragment } from "@/gql/graphql";
 import { Button } from "@/ui/components/ui/button";
@@ -20,7 +21,7 @@ type Props = {
 	address?: AddressDetailsFragment;
 };
 
-export function AddressFormDialog({ address }: Props) {
+export const AddressFormDialog = React.memo(function AddressFormDialog({ address }: Props) {
 	const [open, setOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState("");
