@@ -1,5 +1,6 @@
 "use client";
 
+import { lazy, Suspense } from "react";
 import { type FC, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { type AddressFragment, type AddressTypeEnum } from "@/checkout/graphql";
