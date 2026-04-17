@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, type FC } from "react";
+import React, { useState, useEffect, useCallback, type FC } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/ui/components/ui/button";
 import { ExpressCheckout } from "@/checkout/components/express-checkout";
@@ -43,7 +43,7 @@ interface InformationStepProps {
 // Main Component
 // =============================================================================
 
-export const InformationStep: FC<InformationStepProps> = ({ checkout, onNext }) => {
+const InformationStepContent: FC<InformationStepProps> = ({ checkout, onNext }) => {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { user, authenticated } = useUser();
@@ -187,15 +187,15 @@ export const InformationStep: FC<InformationStepProps> = ({ checkout, onNext }) 
 		}
 	};
 
-	const handleFieldChange = (field: string, value: string) => {
+	const handleFieldChange = useCallback((field: string, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 		if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
-	};
+	}, [errors]);
 
-	const handleCountryChange = (value: string) => {
+	const handleCountryChange = useCallback((value: string) => {
 		setCountryCode(value as CountryCode);
 		setFormData((prev) => ({ ...prev, countryArea: "" }));
-	};
+	}, []);
 
 	const handleShowNewAddressForm = (show: boolean) => {
 		setShowNewAddressForm(show);
