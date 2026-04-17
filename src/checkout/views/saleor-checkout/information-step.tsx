@@ -44,6 +44,7 @@ interface InformationStepProps {
 // =============================================================================
 
 const InformationStepContent: FC<InformationStepProps> = ({ checkout, onNext }) => {
+	if (!checkout) return null;
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { user, authenticated } = useUser();
