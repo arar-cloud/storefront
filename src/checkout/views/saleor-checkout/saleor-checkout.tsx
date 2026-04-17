@@ -4,10 +4,24 @@ import { useEffect, useRef, type FC } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckoutHeader } from "./checkout-header";
 import { OrderSummary } from "./order-summary";
-import { InformationStep } from "./information-step";
-import { ShippingStep } from "./shipping-step";
-import { PaymentStep } from "./payment-step";
-import { ConfirmationStep } from "./confirmation-step";
+import dynamic from "next/dynamic";
+
+const InformationStep = dynamic(() => import("./information-step").then(m => ({ default: m.InformationStep })), {
+  loading: () => null,
+  ssr: true,
+});
+const ShippingStep = dynamic(() => import("./shipping-step").then(m => ({ default: m.ShippingStep })), {
+  loading: () => null,
+  ssr: true,
+});
+const PaymentStep = dynamic(() => import("./payment-step").then(m => ({ default: m.PaymentStep })), {
+  loading: () => null,
+  ssr: true,
+});
+const ConfirmationStep = dynamic(() => import("./confirmation-step").then(m => ({ default: m.ConfirmationStep })), {
+  loading: () => null,
+  ssr: true,
+});
 import { useCheckout } from "@/checkout/hooks/use-checkout";
 import { useUser } from "@/checkout/hooks/use-user";
 import { useCustomerAttach } from "@/checkout/hooks/use-customer-attach";

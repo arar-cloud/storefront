@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC } from "react";
+import { useState, useMemo, type FC } from "react";
 import Image from "next/image";
 import { Tag, ShieldCheck, RotateCcw, Truck, ChevronDown, ShoppingBag } from "lucide-react";
 import { Button } from "@/ui/components/ui/button";
@@ -121,6 +121,20 @@ export const OrderSummary: FC<OrderSummaryProps> = ({ checkout, order, editable 
 
 	// Extract data from either checkout or order
 	const data = checkout ? extractCheckoutData(checkout) : order ? extractOrderData(order) : null;
+
+	// Memoize expensive calculations to prevent recalculation on each render
+	const memoizedCalculations = useMemo(() => {
+		if (!data) return null;
+		return {
+			lines: data.lines,
+			currency: data.currency,
+			subtotal: data.subtotal,
+			shipping: data.shipping,
+			tax: data.tax,
+			discount: data.discount,
+			total: data.total,
+		};
+	}, [data]);
 
 	if (!data) {
 		return null;
