@@ -1,5 +1,5 @@
 import camelCase from "lodash-es/camelCase";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef, useEffect } from "react";
 import {
 	type CountryCode,
 	useAddressValidationRulesQuery,
@@ -56,9 +56,37 @@ export const localizedAddressFieldMessages: Record<LocalizedAddressFieldLabel, s
 };
 
 export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) => {
-	const [{ data, fetching }] = useAddressValidationRulesQuery({
+	const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+	const validationCacheRef = useRef<Map<string, ValidationRulesFragment>>(new Map());
+	const [{ data, fetching }, refetch] = useAddressValidationRulesQuery({
 		variables: { countryCode },
 	});
+
+	const debouncedValidationRefetch = useCallback(
+		(country: CountryCode) => {
+			const cacheKey = `validation-${country}`;
+			if (validationCacheRef.current.has(cacheKey)) {
+				return validationCacheRef.current.get(cacheKey);
+			}
+
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+
+			debounceTimerRef.current = setTimeout(() => {
+				refetch({ countryCode: country });
+			}, 350);
+		},
+		[refetch]
+	);
+
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+		};
+	}, []);
 
 	const validationRules = data?.addressValidationRules as ValidationRulesFragment;
 
@@ -145,6 +173,7 @@ export const useAddressFormUtils = (countryCode: CountryCode = defaultCountry) =
 		isRequiredField,
 		hasAllRequiredFields,
 		getMissingFieldsFromAddress,
+		debouncedValidationRefetch,
 		fetching,
 		...validationRules,
 		allowedFields: validationRules?.allowedFields as AddressField[] | undefined,
