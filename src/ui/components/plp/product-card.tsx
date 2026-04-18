@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -39,7 +40,7 @@ interface ProductCardProps {
 	priority?: boolean;
 }
 
-export function ProductCard({ product, priority = false }: ProductCardProps) {
+function ProductCardComponent({ product, priority = false }: ProductCardProps) {
 	const canQuickAdd = !product.hasVariants && product.onQuickAdd;
 
 	const handleQuickAdd = (e: React.MouseEvent) => {
@@ -143,3 +144,17 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 		</article>
 	);
 }
+
+export const ProductCard = memo(
+	ProductCardComponent,
+	(prevProps, nextProps) => {
+		// Prevent re-render if product data and priority haven't changed
+		return (
+			prevProps.product.id === nextProps.product.id &&
+			prevProps.product.name === nextProps.product.name &&
+			prevProps.product.image === nextProps.product.image &&
+			prevProps.product.price === nextProps.product.price &&
+			prevProps.priority === nextProps.priority
+		);
+	}
+);

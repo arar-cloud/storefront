@@ -3,7 +3,8 @@
 import { type FC } from "react";
 import { Label } from "@/ui/components/ui/label";
 import { Checkbox } from "@/ui/components/ui/checkbox";
-import { SignedInUser, GuestContact } from "@/checkout/components/contact";
+import { useContactSection } from "@/checkout/hooks/use-checkout-sections-context";
+import { SignedInUser, GuestContact } from "@/checkout-sections-context/components/contact";
 
 // User type matching what useUser() returns
 type User = {
@@ -46,23 +47,26 @@ interface ContactSectionProps {
 // Component
 // =============================================================================
 
-export const ContactSection: FC<ContactSectionProps> = ({
-	isSignedIn,
-	user,
-	onSignOut,
-	onSignInClick,
-	email,
-	onEmailChange,
-	onEmailBlur,
-	emailError,
-	createAccount,
-	onCreateAccountChange,
-	password,
-	onPasswordChange,
-	passwordError,
-	subscribeNews,
-	onSubscribeChange,
-}) => {
+export const ContactSection: FC = () => {
+	const { state, setState } = useContactSection();
+	const {
+		isSignedIn,
+		user,
+		email,
+		createAccount,
+		password,
+		subscribeNews,
+		emailError,
+		passwordError,
+	} = state;
+
+	const handleSignOut = () => setState((prev) => ({ ...prev, isSignedIn: false, user: null }));
+	const handleSignInClick = () => setState((prev) => ({ ...prev, showSignIn: true }));
+	const handleEmailChange = (value: string) => setState((prev) => ({ ...prev, email: value }));
+	const handleEmailBlur = () => setState((prev) => ({ ...prev, emailTouched: true }));
+	const handleCreateAccountChange = (value: boolean) => setState((prev) => ({ ...prev, createAccount: value }));
+	const handlePasswordChange = (value: string) => setState((prev) => ({ ...prev, password: value }));
+	const handleSubscribeChange = (value: boolean) => setState((prev) => ({ ...prev, subscribeNews: value }));
 	return (
 		<section className="space-y-4">
 			{isSignedIn && user ? (
