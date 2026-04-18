@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC } from "react";
+import { memo, type FC } from "react";
 import { type CheckoutFragment } from "@/checkout/graphql";
 import { formatShippingPrice } from "@/checkout/lib/utils/money";
 
@@ -21,8 +21,9 @@ interface CheckoutSummaryContextProps {
 /**
  * Summary context showing current checkout state (Contact, Ship to, Method).
  * Used in ShippingStep and PaymentStep to show context from previous steps.
+ * Memoized to prevent re-renders when parent state changes but props remain the same.
  */
-export const CheckoutSummaryContext: FC<CheckoutSummaryContextProps> = ({ rows, onGoToStep }) => {
+const CheckoutSummaryContextComponent: FC<CheckoutSummaryContextProps> = ({ rows, onGoToStep }) => {
 	return (
 		<section className="divide-y divide-border rounded-lg border border-border text-sm">
 			{rows.map((row) => (
