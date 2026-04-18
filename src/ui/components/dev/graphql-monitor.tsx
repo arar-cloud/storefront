@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Activity, AlertTriangle, X, ChevronDown, ChevronUp } from "lucide-react";
 
 /**
@@ -69,6 +69,8 @@ const RETRY_WINDOW_MS = 5000; // Consider it a retry if same operation fails wit
 // Thresholds for alerts
 const RATE_ALERT_THRESHOLD = 5; // requests/second
 const WINDOW_SIZE_MS = 5000; // 5 second window for rate calculation
+const MAX_RECENT_ERRORS = 50; // Bound memory growth
+const MAX_RECENT_REQUESTS = 100; // Bound memory growth
 
 // Dev testing: simulate random failures
 let simulateFailureRate = 0; // 0 = disabled, 0.5 = 50% failure rate
@@ -303,6 +305,10 @@ export function GraphQLMonitor() {
 		return recentRequests.length / (WINDOW_SIZE_MS / 1000);
 	}, []);
 
+	// Memoized toggle handlers to prevent unnecessary child re-renders
+	const handleToggle = useCallback(() => setIsOpen((prev) => !prev), []);
+	const handleExpandToggle = useCallback(() => setIsExpanded((prev) => !prev), []);
+
 	// Update stats periodically
 	useEffect(() => {
 		if (process.env.NODE_ENV !== "development") return;
@@ -387,7 +393,7 @@ export function GraphQLMonitor() {
 					>
 						{isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
 					</button>
-					<button onClick={() => setIsOpen(false)} className="rounded p-1 hover:bg-zinc-700" title="Minimize">
+					<button onClick={handleToggle} className="rounded p-1 hover:bg-zinc-700" title="Minimize">
 						<X className="h-4 w-4" />
 					</button>
 				</div>
