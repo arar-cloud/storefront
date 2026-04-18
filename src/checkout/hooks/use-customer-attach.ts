@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { useCheckoutCustomerAttachMutation } from "@/checkout/graphql";
 import { useUser } from "@/checkout/hooks/use-user";
 import { useCheckout } from "@/checkout/hooks/use-checkout";
