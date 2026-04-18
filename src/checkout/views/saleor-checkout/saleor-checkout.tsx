@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, type FC } from "react";
+import { Suspense, lazy, useEffect, useRef, type FC } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckoutHeader } from "./checkout-header";
 import { OrderSummary } from "./order-summary";
-import { InformationStep } from "./information-step";
-import { ShippingStep } from "./shipping-step";
 import { PaymentStep } from "./payment-step";
-import { ConfirmationStep } from "./confirmation-step";
+
+const InformationStep = lazy(() => import("./information-step").then(mod => ({ default: mod.InformationStep })));
+const ShippingStep = lazy(() => import("./shipping-step").then(mod => ({ default: mod.ShippingStep })));
+const ConfirmationStep = lazy(() => import("./confirmation-step").then(mod => ({ default: mod.ConfirmationStep })));
 import { useCheckout } from "@/checkout/hooks/use-checkout";
 import { useUser } from "@/checkout/hooks/use-user";
 import { useCustomerAttach } from "@/checkout/hooks/use-customer-attach";
