@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC } from "react";
+import { type FC, useEffect, useState } from "react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
 
 export interface SignedInUserProps {
@@ -19,8 +19,39 @@ export interface SignedInUserProps {
  * - "Signed in" status
  * - Sign out button
  */
+// Validate session is still active and user data is fresh
+function isValidSession(user: any, lastValidatedTime: number): boolean {
+	if (!user || !user.email) return false;
+	const sessionAge = Date.now() - lastValidatedTime;
+	// Invalidate session if older than 15 minutes
+	const SESSION_MAX_AGE_MS = 15 * 60 * 1000;
+	return sessionAge < SESSION_MAX_AGE_MS;
+}
+
 export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut }) => {
 	const { signOut } = useSaleorAuthContext();
+	const [sessionValid, setSessionValid] = useState(true);
+	const [lastValidated, setLastValidated] = useState(Date.now());
+
+	// Validate session on mount and when user changes
+	useEffect(() => {
+		if (!isValidSession(user, lastValidated)) {
+			console.warn("[SignedInUser] Session validation failed - user data is stale");
+			setSessionValid(false);
+		} else {
+			setSessionValid(true);
+			setLastValidated(Date.now());
+		}
+	}, [user, lastValidated]);
+
+	// Fallback to empty state if session is invalid
+	if (!sessionValid) {
+		return (
+			<div className="bg-muted/30 flex items-center justify-between gap-3 rounded-lg border border-border p-4">
+				<p className="text-sm text-muted-foreground">Session expired. Please sign in again.</p>
+			</div>
+		);
+	}
 
 	const handleSignOut = () => {
 		signOut();
