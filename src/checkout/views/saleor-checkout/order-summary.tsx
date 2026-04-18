@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC } from "react";
+import { useState, type FC, memo, useCallback } from "react";
 import Image from "next/image";
 import { Tag, ShieldCheck, RotateCcw, Truck, ChevronDown, ShoppingBag } from "lucide-react";
 import { Button } from "@/ui/components/ui/button";
