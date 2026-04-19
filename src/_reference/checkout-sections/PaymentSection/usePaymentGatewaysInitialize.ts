@@ -4,6 +4,21 @@ import { useCheckout } from "@/checkout/hooks/useCheckout";
 import { useSubmit } from "@/checkout/hooks/useSubmit";
 import { type MightNotExist } from "@/checkout/lib/globalTypes";
 import { type ParsedPaymentGateways } from "@/checkout/sections/PaymentSection/types";
+
+// Safe wrapper for payment gateway initialization with error recovery
+function safePaymentGatewayInit<T>(
+  fn: () => Promise<T>,
+  componentName: string
+): Promise<T | null> {
+  return fn().catch(error => {
+    console.error(
+      `[${componentName}] Payment gateway initialization failed:`,
+      error instanceof Error ? error.message : String(error)
+    );
+    // Return null to allow graceful degradation
+    return null as T | null;
+  });
+}
 import { getFilteredPaymentGateways } from "@/checkout/sections/PaymentSection/utils";
 
 export const usePaymentGatewaysInitialize = () => {
