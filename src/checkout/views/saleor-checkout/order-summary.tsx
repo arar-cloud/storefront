@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC } from "react";
+import { useState, type FC, memo, useMemo } from "react";
 import Image from "next/image";
 import { Tag, ShieldCheck, RotateCcw, Truck, ChevronDown, ShoppingBag } from "lucide-react";
 import { Button } from "@/ui/components/ui/button";
@@ -113,7 +113,7 @@ function extractOrderData(order: OrderFragment): OrderSummaryData {
 // Component
 // ============================================================================
 
-export const OrderSummary: FC<OrderSummaryProps> = ({ checkout, order, editable }) => {
+const OrderSummaryBase: FC<OrderSummaryProps> = ({ checkout, order, editable }) => {
 	const [promoCode, setPromoCode] = useState("");
 	const [promoApplied, setPromoApplied] = useState(false);
 	// Collapsed by default on mobile
