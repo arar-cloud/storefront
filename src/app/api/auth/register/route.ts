@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
 import { sanitizeErrorResponse, logErrorForDebug } from "@/lib/security/response-sanitizer";
+import { applySecurityHeaders } from "@/lib/security-headers";
 
 const REGISTER_MUTATION = `
   mutation AccountRegister($input: AccountRegisterInput!) {
@@ -63,7 +64,8 @@ export async function POST(request: NextRequest) {
 	if (!result.ok) {
 		logErrorForDebug(result.error, { endpoint: '/api/auth/register' });
 		const sanitized = sanitizeErrorResponse(result.error, result.error.type === "network" ? 503 : 400);
-		return NextResponse.json(sanitized, { status: result.error.type === "network" ? 503 : 400 });
+		const errorResponse = NextResponse.json(sanitized, { status: result.error.type === "network" ? 503 : 400 });
+		return applySecurityHeaders(errorResponse);
 	}
 
 	const accountRegister = result.data.accountRegister;
@@ -75,8 +77,9 @@ export async function POST(request: NextRequest) {
 	}
 
 	// Success
-	return NextResponse.json({
+	const response = NextResponse.json({
 		user: accountRegister?.user,
 		message: "Account created successfully. Please check your email to verify your account.",
 	});
+	return applySecurityHeaders(response);
 }
