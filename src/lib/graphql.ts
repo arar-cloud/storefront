@@ -1,3 +1,57 @@
+// ============================================================================
+// Request Deduplication & Caching
+// ============================================================================
+
+interface CacheEntry {
+	promise: Promise<any>;
+	result?: any;
+	error?: Error;
+	timestamp: number;
+}
+
+const REQUEST_CACHE_TTL = 5000; // Cache successful requests for 5 seconds
+const requestCache = new Map<string, CacheEntry>();
+
+/** Generate cache key from document and variables */
+function getCacheKey(doc: any, variables?: Record<string, any>): string {
+	const docStr = typeof doc === 'string' ? doc : (doc.loc?.source?.body || JSON.stringify(doc));
+	const varStr = variables ? JSON.stringify(variables) : '';
+	return `${docStr}|${varStr}`;
+}
+
+/** Deduplicate in-flight requests and cache results */
+export function createCachedRequest<T>(
+	executor: () => Promise<T>,
+	cacheKey: string,
+): Promise<T> {
+	const cached = requestCache.get(cacheKey);
+	const now = Date.now();
+
+	// Return cached result if still valid
+	if (cached && cached.result && now - cached.timestamp < REQUEST_CACHE_TTL) {
+		return Promise.resolve(cached.result as T);
+	}
+
+	// Return in-flight promise to deduplicate concurrent requests
+	if (cached && cached.promise) {
+		return cached.promise as Promise<T>;
+	}
+
+	// Create new request and cache it
+	const promise = executor()
+		.then(result => {
+			requestCache.set(cacheKey, { promise, result, timestamp: now });
+			return result;
+		})
+		.catch(error => {
+			requestCache.delete(cacheKey);
+			throw error;
+		});
+
+	requestCache.set(cacheKey, { promise, timestamp: now });
+	return promise;
+}
+
 import { type TypedDocumentString } from "../gql/graphql";
 
 // ============================================================================
