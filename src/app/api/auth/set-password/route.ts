@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
+import { sanitizeErrorResponse, logErrorForDebug } from "@/lib/security/response-sanitizer";
 
 const SET_PASSWORD_MUTATION = `
   mutation SetPassword($email: String!, $token: String!, $password: String!) {
@@ -55,9 +56,10 @@ export async function POST(request: NextRequest) {
 
 	// Network or GraphQL error
 	if (!result.ok) {
-		console.error("Set password error:", result.error.type);
+		logErrorForDebug(result.error, { endpoint: '/api/auth/set-password', type: 'graphql' });
+		const sanitized = sanitizeErrorResponse(result.error, result.error.type === "network" ? 503 : 400);
 		return NextResponse.json(
-			{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
+			{ errors: [{ message: sanitized.error || getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
 			{ status: result.error.type === "network" ? 503 : 400 },
 		);
 	}
@@ -98,8 +100,12 @@ export async function POST(request: NextRequest) {
 		});
 	}
 
+	const sanitized = sanitizeErrorResponse(
+		new Error("Failed to set password"),
+		500
+	);
 	return NextResponse.json(
-		{ errors: [{ message: "Failed to set password", code: "UNKNOWN" }] },
+		{ errors: [{ message: sanitized.error || "Failed to set password", code: "UNKNOWN" }] },
 		{ status: 500 },
 	);
 }
