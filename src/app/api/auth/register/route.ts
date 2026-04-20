@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
+import { sanitizeErrorResponse, logErrorForDebug } from "@/lib/security/response-sanitizer";
 
 const REGISTER_MUTATION = `
   mutation AccountRegister($input: AccountRegisterInput!) {
@@ -60,11 +61,9 @@ export async function POST(request: NextRequest) {
 
 	// Network or GraphQL error
 	if (!result.ok) {
-		console.error("Registration error:", result.error.type);
-		return NextResponse.json(
-			{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
-			{ status: result.error.type === "network" ? 503 : 400 },
-		);
+		logErrorForDebug(result.error, { endpoint: '/api/auth/register' });
+		const sanitized = sanitizeErrorResponse(result.error, result.error.type === "network" ? 503 : 400);
+		return NextResponse.json(sanitized, { status: result.error.type === "network" ? 503 : 400 });
 	}
 
 	const accountRegister = result.data.accountRegister;
