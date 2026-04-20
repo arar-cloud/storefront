@@ -3,6 +3,9 @@ import xss from "xss";
 
 const parser = edjsHTML();
 
+// Whitelist of safe EditorJS block types to prevent injection
+const SAFE_BLOCK_TYPES = new Set(['paragraph', 'header', 'list', 'quote', 'image', 'delimiter', 'code']);
+
 interface EditorJSBlock {
 	type: string;
 	data: {
@@ -46,7 +49,12 @@ export function parseEditorJSToHtml(content: string | null | undefined): string[
 		if (!parsed.blocks || !Array.isArray(parsed.blocks)) {
 			return null;
 		}
-		return parser.parse(parsed).map((html: string) => xss(html));
+		// Validate block types before parsing to prevent code injection
+		const validBlocks = parsed.blocks.filter(block => SAFE_BLOCK_TYPES.has(String(block.type)));
+		if (validBlocks.length === 0) {
+			return null;
+		}
+		return parser.parse({ ...parsed, blocks: validBlocks }).map((html: string) => xss(html));
 	} catch {
 		// Not valid EditorJS JSON, return null
 		return null;
