@@ -27,6 +27,10 @@ const WEBHOOK_SECRET = process.env.SALEOR_WEBHOOK_SECRET;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 10; // Max requests per window
 
+// Explicit rate limiter functions for better maintainability
+const revalidateLimiter = { checkRateLimit };
+const getClientIdentifier = (ip: string) => `post:${ip}`;
+
 interface RateLimitEntry {
 	count: number;
 	resetTime: number;
