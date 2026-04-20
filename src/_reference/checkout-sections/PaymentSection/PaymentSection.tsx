@@ -1,8 +1,9 @@
+import React, { memo } from "react";
 import { PaymentMethods } from "./PaymentMethods";
 import { Divider } from "@/checkout/components/Divider";
 import { Title } from "@/checkout/components/Title";
 
-export const PaymentSection = () => {
+const PaymentSection = () => {
 	return (
 		<>
 			<Divider />
@@ -13,3 +14,5 @@ export const PaymentSection = () => {
 		</>
 	);
 };
+
+export default memo(PaymentSection);
