@@ -4,6 +4,7 @@ import { createSaleorAuthClient } from "@saleor/auth-sdk";
 import { cookies } from "next/headers";
 import { invariant } from "ts-invariant";
 import { ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE, encodeCookieName } from "./constants";
+import { validateLoggingForCredentialLeaks, auditTokenLifetime } from "@/lib/security/credential-audit";
 
 const saleorApiUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 invariant(saleorApiUrl, "Missing NEXT_PUBLIC_SALEOR_API_URL env variable");
