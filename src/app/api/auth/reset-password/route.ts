@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
+import { sanitizeErrorResponse, logErrorForDebug } from "@/lib/security/response-sanitizer";
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
@@ -43,18 +44,16 @@ export async function POST(request: NextRequest) {
 
 	// Network or GraphQL error
 	if (!result.ok) {
-		console.error("Password reset error:", result.error.type);
-		return NextResponse.json(
-			{ errors: [{ message: getUserMessage(result.error), code: result.error.type.toUpperCase() }] },
-			{ status: result.error.type === "network" ? 503 : 400 },
-		);
+		logErrorForDebug(result.error, { endpoint: '/api/auth/reset-password', type: 'graphql' });
+		const sanitized = sanitizeErrorResponse(result.error, result.error.type === "network" ? 503 : 400);
+		return NextResponse.json(sanitized, { status: result.error.type === "network" ? 503 : 400 });
 	}
 
 	const requestPasswordReset = result.data.requestPasswordReset;
 
 	// Saleor validation errors - log but don't expose to prevent email enumeration
 	if (requestPasswordReset?.errors?.length) {
-		console.error("Password reset validation errors");
+		logErrorForDebug(requestPasswordReset.errors, { endpoint: '/api/auth/reset-password', type: 'validation' });
 		// Still return success to prevent email enumeration
 	}
 
