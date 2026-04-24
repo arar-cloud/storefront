@@ -11,6 +11,17 @@ services:
     restart: always
     ports:
       - 3000:3000
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpus: "1.0"
+    cpu_quota: 100000
+    cpu_shares: 1024
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - saleor_network
 

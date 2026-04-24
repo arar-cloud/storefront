@@ -40,6 +40,8 @@ const config: CodegenConfig = {
 	schema: schemaUrl,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
+	watchPattern: "src/graphql/**/*.graphql",
+	ignoreNoDocuments: true,
 	generates: {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
@@ -73,6 +75,7 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	cache: true,
 };
 
 export default config;
