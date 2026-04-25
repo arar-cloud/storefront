@@ -1,4 +1,9 @@
-/** @type {import('next').NextConfig} */
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzerConfig = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const config = {
   onDemandEntries: {
     maxInactiveAge: 25 * 1000,
@@ -113,6 +118,29 @@ const config = {
 			fullUrl: process.env.NODE_ENV === "development",
 		},
 	},
+
+	// Webpack optimization: chunk splitting for better caching and TTI
+	webpack: (config, { isServer }) => {
+		if (!isServer) {
+			config.optimization.splitChunks.cacheGroups = {
+				...config.optimization.splitChunks.cacheGroups,
+				vendor: {
+					test: /[\\\/]node_modules[\\\/]/,
+					name: 'vendors',
+					priority: 10,
+					reuseExistingChunk: true,
+					enforce: true,
+				},
+				common: {
+					minChunks: 2,
+					priority: 5,
+					reuseExistingChunk: true,
+					enforce: true,
+				},
+			};
+		}
+		return config;
+	},
 };
 
-export default config;
+export default withBundleAnalyzerConfig(config);
