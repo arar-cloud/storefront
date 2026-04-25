@@ -18,8 +18,34 @@
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import xss from "xss";
 
 loadEnvConfig(process.cwd());
+
+/**
+ * Sanitize potentially dangerous GraphQL scalar values to prevent XSS attacks.
+ * Applied to GenericScalar and JSON types that may contain user-generated content.
+ */
+const sanitizeScalarValue = (value: any): any => {
+  if (typeof value === "string") {
+    return xss(value, {
+      whiteList: {},
+      stripIgnoredTag: true,
+      stripComment: true,
+      onIgnoreTag: (tag) => `&lt;${tag}&gt;`,
+    });
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).reduce(
+      (acc, [key, val]) => ({
+        ...acc,
+        [key]: sanitizeScalarValue(val),
+      }),
+      {}
+    );
+  }
+  return value;
+};
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
