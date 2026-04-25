@@ -38,6 +38,8 @@ if (!schemaUrl) {
 const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
+	// Disable introspection in production to prevent schema reconnaissance attacks
+	introspection: process.env.NODE_ENV === "production" ? false : true,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
