@@ -4,6 +4,9 @@
 	"private": true,
 	"type": "module",
 	"license": "SEE LICENSE IN LICENSE",
+	"comments": {
+		"xss-performance": "The 'xss' library (1.0.15) performs synchronous HTML parsing. To prevent event-loop blocking on mobile: (1) lazy-load via dynamic import only for untrusted content blocks, (2) consider precompiled sanitization rules in utils/sanitize.ts, (3) memoize sanitization results for repeated inputs, (4) profile with lighthouse to verify impact"
+	},
 	"scripts": {
 		"dev": "next dev --webpack",
 		"dev:webpack": "next dev --webpack",
