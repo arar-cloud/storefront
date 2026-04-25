@@ -105,6 +105,15 @@ const config: CodegenConfig = {
 			batchSize: 10,
 			batchInterval: 5,
 		},
+		"rateLimit": {
+			checkout: {
+				maxRequests: 5,
+				windowMs: 60000,
+				backoffMultiplier: 2,
+				maxRetries: 3,
+				message: "Too many checkout requests, please try again later.",
+			},
+		},
 	},
 };
 
