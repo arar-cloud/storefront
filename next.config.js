@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const config = {
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 5,
+  },
+  eslint: {
+    dirs: ['src', 'pages', 'app'],
+    ignoreDuringBuilds: false,
+    cacheLocation: '.next/eslint-cache',
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [320, 420, 640, 768, 1024, 1280, 1536],
