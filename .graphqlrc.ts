@@ -73,6 +73,13 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	extensions: {
+		"urql.io/batching": {
+			enabled: true,
+			batchSize: 10,
+			batchInterval: 5,
+		},
+	},
 };
 
 export default config;
