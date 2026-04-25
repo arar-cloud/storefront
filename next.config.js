@@ -1,5 +1,33 @@
-/** @type {import('next').NextConfig} */
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzerConfig = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const config = {
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 5,
+  },
+  eslint: {
+    dirs: ['src', 'pages', 'app'],
+    ignoreDuringBuilds: false,
+    cacheLocation: '.next/eslint-cache',
+  },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [320, 420, 640, 768, 1024, 1280, 1536],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 31536000, // 1 year for static assets
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
 	// Cache Components (Partial Prerendering)
 	// Enables mixing static, cached, and dynamic content in a single route.
 	// See: https://nextjs.org/docs/app/getting-started/cache-components
@@ -90,6 +118,29 @@ const config = {
 			fullUrl: process.env.NODE_ENV === "development",
 		},
 	},
+
+	// Webpack optimization: chunk splitting for better caching and TTI
+	webpack: (config, { isServer }) => {
+		if (!isServer) {
+			config.optimization.splitChunks.cacheGroups = {
+				...config.optimization.splitChunks.cacheGroups,
+				vendor: {
+					test: /[\\\/]node_modules[\\\/]/,
+					name: 'vendors',
+					priority: 10,
+					reuseExistingChunk: true,
+					enforce: true,
+				},
+				common: {
+					minChunks: 2,
+					priority: 5,
+					reuseExistingChunk: true,
+					enforce: true,
+				},
+			};
+		}
+		return config;
+	},
 };
 
-export default config;
+export default withBundleAnalyzerConfig(config);

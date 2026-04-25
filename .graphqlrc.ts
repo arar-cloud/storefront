@@ -73,6 +73,7 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	watch: process.env.NODE_ENV === "development",
 };
 
 export default config;
