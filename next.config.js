@@ -1,5 +1,44 @@
 /** @type {import('next').NextConfig} */
 const config = {
+  // Security headers to prevent clickjacking, content injection, and MIME-sniffing
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' " + (process.env.NEXT_PUBLIC_SALEOR_API_URL || "") + "; frame-ancestors 'none';",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "geolocation=(), microphone=(), camera=(), payment=()",
+          },
+        ],
+      },
+    ];
+  },
+
 	// Cache Components (Partial Prerendering)
 	// Enables mixing static, cached, and dynamic content in a single route.
 	// See: https://nextjs.org/docs/app/getting-started/cache-components
