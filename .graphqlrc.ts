@@ -15,6 +15,10 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ * - SECURITY: All HTML content from Saleor API (descriptions, rich text) must be
+ *   sanitized via xss library before rendering in Editor.js to prevent DOM XSS
+ * - Introspection queries are disabled in production to prevent schema reconnaissance
+ * - Query depth is limited to 10 levels to prevent DoS via nested queries
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
