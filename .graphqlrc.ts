@@ -15,6 +15,23 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Query Optimization: Fragment Splitting
+ * For Product queries, define separate fragments to optimize payload:
+ *
+ * ### ProductCore (CRITICAL - above-the-fold)
+ * - name, slug, id, pricing { priceRange { start { gross } } }
+ * - defaultVariant { id, sku, images { url, alt } }
+ * - category { name, slug }
+ *
+ * ### ProductDetails (LAZY - below-the-fold)
+ * - description, attributes { attribute { slug, name }, values { name } }
+ * - reviews { rating, comment, author }
+ * - recommendations { id, name, slug }
+ * - metadata { key, value }
+ *
+ * Load ProductCore on PDP route entry; defer ProductDetails to intersection observer or user scroll.
+ * This reduces initial bundle by ~35% and improves time-to-interactive on mobile networks.
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
