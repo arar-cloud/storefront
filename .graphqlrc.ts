@@ -42,6 +42,13 @@ const config: CodegenConfig = {
 	introspection: process.env.NODE_ENV === "production" ? false : true,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
+	// Validate query depth to prevent DoS via deeply nested queries
+	extensions: {
+		validationRules: [
+			"MaxDepth",
+			"NoSchemaIntrospectionQuery",
+		],
+	},
 	generates: {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
