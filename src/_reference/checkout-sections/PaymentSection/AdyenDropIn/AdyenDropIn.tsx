@@ -1,5 +1,5 @@
 import AdyenCheckout from "@adyen/adyen-web";
-import { type FC, useCallback, useEffect, useRef } from "react";
+import { type FC, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { createAdyenCheckoutConfig } from "@/checkout/sections/PaymentSection/AdyenDropIn/utils";
 import {
@@ -21,10 +21,15 @@ export const AdyenDropIn: FC<AdyenDropinProps> = ({ config }) => {
 	const dropinContainerElRef = useRef<HTMLDivElement>(null);
 	const dropinComponentRef = useRef<DropinElement | null>(null);
 
+	const memoizedCheckoutConfig = useMemo(
+		() => createAdyenCheckoutConfig({ onSubmit, onAdditionalDetails }),
+		[onAdditionalDetails, onSubmit],
+	);
+
 	const createAdyenCheckoutInstance = useCallback(
 		async (container: HTMLDivElement, data: AdyenGatewayInitializePayload) => {
 			const adyenCheckout = await AdyenCheckout(
-				createAdyenCheckoutConfig({ ...data, onSubmit, onAdditionalDetails }),
+				{ ...data, ...memoizedCheckoutConfig },
 			);
 
 			dropinComponentRef.current?.unmount();
