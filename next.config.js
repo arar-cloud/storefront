@@ -90,6 +90,13 @@ const config = {
 			fullUrl: process.env.NODE_ENV === "development",
 		},
 	},
+
+	// Incremental Static Regeneration (ISR) on-demand revalidation
+	// Reduces backend load by regenerating static pages on-demand instead of at build time
+	onDemandEntries: {
+		maxInactiveAge: 60 * 60 * 1000, // 1 hour: evict inactive pages from ISR cache
+		maxSize: 250, // Max 250 pages in memory for ISR fallback
+	},
 };
 
 export default config;
