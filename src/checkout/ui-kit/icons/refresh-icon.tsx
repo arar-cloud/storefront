@@ -1,9 +1,11 @@
 import { type FC, type SVGProps } from "react";
+import { memo } from "react";
 
 /**
  * Refresh/returns icon for trust badges.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
  */
-export const RefreshIcon: FC<SVGProps<SVGSVGElement>> = (props) => (
+export const RefreshIcon: FC<SVGProps<SVGSVGElement>> = memo((props) => (
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		viewBox="0 0 24 24"

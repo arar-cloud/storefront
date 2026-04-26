@@ -1,6 +1,7 @@
 import { SvgContainer, type SvgProps } from "./svg-container";
+import { memo } from "react";
 
-export const RemoveIcon = (props: SvgProps) => (
+export const RemoveIcon = memo((props: SvgProps) => (
 	<SvgContainer size={24} fill="none" {...props}>
 		<path
 			fillRule="evenodd"

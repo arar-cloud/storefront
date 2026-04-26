@@ -1,11 +1,12 @@
 import { type SVGProps } from "react";
+import { memo } from "react";
 
 /**
  * Apple Pay mark icon.
  * Official Apple Pay brand asset.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
  */
-export function ApplePayIcon(props: SVGProps<SVGSVGElement>) {
-	return (
+export const ApplePayIcon = memo((props: SVGProps<SVGSVGElement>) => (
 		<svg viewBox="24 26 122 56" fill="currentColor" {...props}>
 			{/* Apple logo */}
 			<path d="M45.19,35.64c1.42-1.77,2.38-4.15,2.13-6.59c-2.07.1-4.61,1.37-6.07,3.14c-1.32,1.52-2.48,4-2.18,6.33c2.33.2,4.66-1.17,6.12-2.88" />
@@ -15,5 +16,4 @@ export function ApplePayIcon(props: SVGProps<SVGSVGElement>) {
 			<path d="M90.74,61.98c0-4.83,3.7-7.8,10.27-8.17l7.56-.45v-2.13c0-3.07-2.07-4.91-5.54-4.91c-3.28,0-5.33,1.57-5.83,4.04h-5.36c.31-4.99,4.57-8.66,11.39-8.66c6.69,0,10.97,3.54,10.97,9.08v19.03h-5.43v-4.54h-.13c-1.6,3.07-5.09,5.01-8.72,5.01c-5.41,0-9.19-3.36-9.19-8.33zm17.83-2.49v-2.18l-6.8.42c-3.39.24-5.3,1.73-5.3,4.1c0,2.41,2,3.99,5.04,3.99c3.96,0,7.06-2.73,7.06-6.33z" />
 			<path d="M119.34,79.99v-4.59c.42.1,1.36.1,1.84.1c2.63,0,4.04-1.1,4.91-3.94c0-.05.5-1.68.5-1.71l-9.98-27.65h6.14l6.98,22.47h.1l6.98-22.47h5.99l-10.34,29.06c-2.36,6.7-5.09,8.85-10.82,8.85c-.47,0-1.89-.05-2.31-.13z" />
 		</svg>
-	);
-}
+	));

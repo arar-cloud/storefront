@@ -1,11 +1,12 @@
 import { type SVGProps } from "react";
+import { memo } from "react";
 
 /**
  * Google Pay mark icon.
  * Official Google Pay brand asset.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
  */
-export function GooglePayIcon(props: SVGProps<SVGSVGElement>) {
-	return (
+export const GooglePayIcon = memo((props: SVGProps<SVGSVGElement>) => (
 		<svg viewBox="280 280 535 230" fill="none" {...props}>
 			{/* G Mark */}
 			<path
@@ -38,5 +39,4 @@ export function GooglePayIcon(props: SVGProps<SVGSVGElement>) {
 				d="M808.2,342.4l-64,147.2h-19.8l23.8-51.5L706,342.4h20.9l30.4,73.4h0.4l29.6-73.4H808.2z"
 			/>
 		</svg>
-	);
-}
+	));
