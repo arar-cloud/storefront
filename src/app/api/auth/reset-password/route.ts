@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
+
+const ResetPasswordSchema = z.object({
+  email: z.string().email("Invalid email format").max(254),
+  redirectUrl: z.string().url("Invalid redirect URL"),
+});
+
+// Rate limiter
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+
+function isRateLimited(clientId: string): boolean {
+  const now = Date.now();
+  const record = requestCounts.get(clientId);
+  if (!record || now > record.resetTime) {
+    requestCounts.set(clientId, { count: 1, resetTime: now + 60000 });
+    return false;
+  }
+  if (record.count >= 3) return true;
+  record.count++;
+  return false;
+}
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
@@ -26,15 +47,30 @@ interface RequestPasswordResetResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as ResetPasswordRequest;
-	const { email, channel, redirectUrl } = body;
+	try {
+		const clientIp = request.headers.get("x-forwarded-for") || "unknown";
+		if (isRateLimited(clientIp)) {
+			return NextResponse.json(
+				{ errors: [{ message: "Too many requests. Please try again later." }] },
+				{ status: 429 }
+			);
+		}
 
-	if (!email || !channel || !redirectUrl) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email, channel, and redirectUrl are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
+		const body = await request.json();
+		const validation = ResetPasswordSchema.safeParse(body);
+		if (!validation.success) {
+			return NextResponse.json(
+				{
+					errors: validation.error.errors.map((e) => ({
+						field: e.path[0],
+						message: e.message,
+					})),
+				},
+				{ status: 400 }
+			);
+		}
+
+		const { email, channel, redirectUrl } = validation.data as ResetPasswordRequest & { channel: string };
 
 	const result = await executeRawGraphQL<RequestPasswordResetResult>({
 		query: REQUEST_PASSWORD_RESET_MUTATION,
@@ -58,6 +94,13 @@ export async function POST(request: NextRequest) {
 		// Still return success to prevent email enumeration
 	}
 
-	// Always return success to prevent email enumeration
-	return NextResponse.json({ success: true });
+		// Always return success to prevent email enumeration
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error("Password reset handler error:", error);
+		return NextResponse.json(
+			{ errors: [{ message: "An error occurred. Please try again." }] },
+			{ status: 500 }
+		);
+	}
 }
