@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC, type ReactNode } from "react";
+import { type FC, type ReactNode, useCallback, useRef } from "react";
 import { User, MapPin, Building, Phone, type LucideIcon } from "lucide-react";
 import { Input } from "@/ui/components/ui/input";
 import { Label } from "@/ui/components/ui/label";

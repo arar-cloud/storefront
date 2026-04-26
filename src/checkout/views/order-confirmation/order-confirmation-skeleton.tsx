@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { CheckoutHeader } from "@/checkout/views/saleor-checkout/checkout-header";
+import { Suspense } from "react";
 
 /**
  * Skeleton primitive - matches design system tokens.
@@ -21,10 +22,28 @@ const Bone = ({ className }: { className?: string }) => (
  * - two-column layout same as checkout
  */
 /**
+ * Minimal loading state shown while skeleton hydrates.
+ * Faster to render than full skeleton, improves perceived performance.
+ */
+const SkeletonFallback = () => (
+	<div className="min-h-screen bg-secondary">
+		<CheckoutHeader step={4} onStepClick={() => {}} />
+		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+			<div className="flex justify-center py-16">
+				<div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+			</div>
+		</main>
+	</div>
+	</Suspense>
+);
+
+/**
  * Minimal skeleton with reduced DOM complexity.
  * Delayed visibility prevents flash on fast loads while keeping structure simple.
+ * Wrapped in Suspense boundary to defer rendering and improve time-to-interactive.
  */
 export const OrderConfirmationSkeleton = () => (
+	<Suspense fallback={<SkeletonFallback />}>
 	<div className="min-h-screen animate-skeleton-delayed bg-secondary opacity-0">
 		{/* Real header at step 4 */}
 		<CheckoutHeader step={4} onStepClick={() => {}} />
