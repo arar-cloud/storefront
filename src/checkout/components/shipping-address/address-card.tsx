@@ -1,6 +1,7 @@
 "use client";
 
 import { type FC } from "react";
+import React from "react";
 import { MapPin, ChevronRight, Check } from "lucide-react";
 import { type AddressFragment } from "@/checkout/graphql";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ export interface AddressCardProps {
  * Compact address card showing address preview.
  * Used as the collapsed state when there are many addresses.
  */
-export const AddressCard: FC<AddressCardProps> = ({
+const AddressCardComponent: FC<AddressCardProps> = ({
 	address,
 	isSelected = false,
 	isDefault = false,
