@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
+
+const SetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
+  channel: z.string().min(1),
+});
+
+// Rate limiter
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+
+function isRateLimited(clientId: string): boolean {
+  const now = Date.now();
+  const record = requestCounts.get(clientId);
+  if (!record || now > record.resetTime) {
+    requestCounts.set(clientId, { count: 1, resetTime: now + 60000 });
+    return false;
+  }
+  if (record.count >= 5) return true;
+  record.count++;
+  return false;
+}
 
 const SET_PASSWORD_MUTATION = `
   mutation SetPassword($email: String!, $token: String!, $password: String!) {
@@ -31,22 +53,30 @@ interface SetPasswordResult {
 }
 
 export async function POST(request: NextRequest) {
-	const body = (await request.json()) as SetPasswordRequest;
-	const { email, token, password } = body;
+	try {
+		const clientIp = request.headers.get("x-forwarded-for") || "unknown";
+		if (isRateLimited(clientIp)) {
+			return NextResponse.json(
+				{ errors: [{ message: "Too many requests. Please try again later." }] },
+				{ status: 429 }
+			);
+		}
 
-	if (!email || !token || !password) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email, token, and password are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
-	}
+		const body = await request.json();
+		const validation = SetPasswordSchema.safeParse(body);
+		if (!validation.success) {
+			return NextResponse.json(
+				{
+					errors: validation.error.errors.map((e) => ({
+						field: String(e.path[0]),
+						message: e.message,
+					})),
+				},
+				{ status: 400 }
+			);
+		}
 
-	if (password.length < 8) {
-		return NextResponse.json(
-			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
-			{ status: 400 },
-		);
-	}
+		const { email, token, password } = validation.data as SetPasswordRequest;
 
 	const result = await executeRawGraphQL<SetPasswordResult>({
 		query: SET_PASSWORD_MUTATION,
@@ -98,8 +128,15 @@ export async function POST(request: NextRequest) {
 		});
 	}
 
-	return NextResponse.json(
-		{ errors: [{ message: "Failed to set password", code: "UNKNOWN" }] },
-		{ status: 500 },
-	);
+		return NextResponse.json(
+			{ errors: [{ message: "Failed to set password", code: "UNKNOWN" }] },
+			{ status: 500 },
+		);
+	} catch (error) {
+		console.error("Set password error:", error);
+		return NextResponse.json(
+			{ errors: [{ message: "Internal server error", code: "INTERNAL_ERROR" }] },
+			{ status: 500 },
+		);
+	}
 }
