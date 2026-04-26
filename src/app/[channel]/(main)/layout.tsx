@@ -81,21 +81,21 @@ export default async function RootLayout(props: {
 	const channel = (await props.params).channel;
 
 	return (
-		<CartProvider>
-			<Suspense fallback={<HeaderSkeleton />}>
+		<div className="flex min-h-screen flex-col">
+			<Suspense fallback={<HeaderSkeleton />} key="header">
 				<Header channel={channel} />
 			</Suspense>
-			<div className="flex min-h-[calc(100dvh-64px)] flex-col">
+			<CartProvider>
+				<Suspense fallback={null}>
+					<CartDrawerWrapper channel={channel} />
+				</Suspense>
 				<main className="flex-1">
 					<Suspense fallback={null}>{props.children}</Suspense>
 				</main>
-				<Suspense fallback={<FooterSkeleton />}>
-					<Footer channel={channel} />
-				</Suspense>
-			</div>
-			<Suspense fallback={null}>
-				<CartDrawerWrapper channel={channel} />
+			</CartProvider>
+			<Suspense fallback={<FooterSkeleton />} key="footer">
+				<Footer channel={channel} />
 			</Suspense>
-		</CartProvider>
+		</div>
 	);
 }
