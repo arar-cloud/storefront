@@ -1,6 +1,10 @@
 import { SvgContainer, type SvgProps } from "./svg-container";
 import { memo } from "react";
 
+/**
+ * Trash/delete icon.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
+ */
 export const TrashIcon = memo((props: SvgProps) => (
 	<SvgContainer size={24} fill="none" {...props}>
 		<path
