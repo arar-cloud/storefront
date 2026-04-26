@@ -69,6 +69,7 @@ export const HybridAddressSelector: FC<HybridAddressSelectorProps> = ({
 	const useManyMode = addresses.length > INLINE_THRESHOLD;
 
 	// Reset "set as default" checkbox when selection changes
+	// Use local state to prevent cascading re-renders to child AddressCard components
 	const handleSelectAddress = useCallback(
 		(id: string) => {
 			onSelectAddress(id);
