@@ -3,6 +3,7 @@ import { CheckoutHeader } from "@/checkout/views/saleor-checkout/checkout-header
 
 /**
  * Skeleton primitive - matches design system tokens.
+ * Uses height constraints to minimize layout shift and reflow cost.
  */
 const Bone = ({ className }: { className?: string }) => (
 	<div className={cn("animate-pulse rounded bg-muted", className)} />
@@ -18,6 +19,10 @@ const Bone = ({ className }: { className?: string }) => (
  * - CheckoutHeader step={4}
  * - main: mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8
  * - two-column layout same as checkout
+ */
+/**
+ * Minimal skeleton with reduced DOM complexity.
+ * Delayed visibility prevents flash on fast loads while keeping structure simple.
  */
 export const OrderConfirmationSkeleton = () => (
 	<div className="min-h-screen animate-skeleton-delayed bg-secondary opacity-0">
