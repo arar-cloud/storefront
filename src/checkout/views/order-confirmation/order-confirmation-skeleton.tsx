@@ -98,7 +98,8 @@ export const OrderConfirmationSkeleton = () => (
 				</div>
 			</div>
 		</main>
-	</div>
+		</div>
+	</Suspense>
 );
 
 /**
