@@ -8,6 +8,7 @@ import xss from "xss";
 
 import { executePublicGraphQL } from "@/lib/graphql";
 import { ProductDetailsDocument, type ProductDetailsQuery } from "@/gql/graphql";
+// ProductDetailsDocument now includes variants, attributes, and stock in single batch
 import { buildPageMetadata, buildProductJsonLd } from "@/lib/seo";
 import { Breadcrumbs } from "@/ui/components/breadcrumbs";
 import {
@@ -27,6 +28,7 @@ async function getProductData(slug: string, channel: string) {
 	cacheLife("minutes");
 	cacheTag(`product:${slug}`);
 
+	// Execute single consolidated query with variants, stock, and attributes batched
 	const result = await executePublicGraphQL(ProductDetailsDocument, {
 		variables: {
 			slug: decodeURIComponent(slug),
@@ -34,6 +36,7 @@ async function getProductData(slug: string, channel: string) {
 		},
 		revalidate: 300,
 	});
+	// All product relationships fetched in single round-trip; no N+1 queries
 
 	if (!result.ok) {
 		console.error(`[getProductData] Failed to fetch product ${slug} for ${channel}:`, result.error.message);
