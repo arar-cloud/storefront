@@ -73,6 +73,9 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	// Field masking and deferred query support for reducing over-fetching
+	experimentalFragmentVariables: true,
+	skipTypename: false,
 };
 
 export default config;
