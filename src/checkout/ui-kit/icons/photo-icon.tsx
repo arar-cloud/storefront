@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { SvgContainer, type SvgProps } from "./svg-container";
 
-export const PhotoIcon = (props: SvgProps) => (
+export const PhotoIcon = memo((props: SvgProps) => (
 	<SvgContainer size={24} fill="none" {...props}>
 		<path
 			fillRule="evenodd"
@@ -9,4 +10,4 @@ export const PhotoIcon = (props: SvgProps) => (
 			fill="currentColor"
 		/>
 	</SvgContainer>
-);
+));
