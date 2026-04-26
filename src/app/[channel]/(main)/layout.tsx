@@ -85,14 +85,14 @@ export default async function RootLayout(props: {
 			<Suspense fallback={<HeaderSkeleton />} key="header">
 				<Header channel={channel} />
 			</Suspense>
-			<CartProvider>
-				<Suspense fallback={null}>
-					<CartDrawerWrapper channel={channel} />
-				</Suspense>
-				<main className="flex-1">
+			<main className="flex-1">
+				<CartProvider>
+					<Suspense fallback={null}>
+						<CartDrawerWrapper channel={channel} />
+					</Suspense>
 					<Suspense fallback={null}>{props.children}</Suspense>
-				</main>
-			</CartProvider>
+				</CartProvider>
+			</main>
 			<Suspense fallback={<FooterSkeleton />} key="footer">
 				<Footer channel={channel} />
 			</Suspense>
