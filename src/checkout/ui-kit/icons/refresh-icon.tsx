@@ -1,4 +1,8 @@
 import { type FC, type SVGProps } from "react";
+/**
+ * Refresh/reload icon.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
+ */
 import { memo } from "react";
 
 /**
