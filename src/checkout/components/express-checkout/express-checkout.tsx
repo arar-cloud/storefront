@@ -2,7 +2,10 @@
 
 import { Button } from "@/ui/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ApplePayIcon, GooglePayIcon } from "@/checkout/ui-kit/icons";
+import {<MemoizedApplePayIcon <MemoizedGooglePayIcon as GooglePayIconBase />from "@/checkout/ui-kit/icons";
+
+const MemoizedApplePayIcon = React.memo(ApplePayIconBase);
+const MemoizedGooglePayIcon = React.memo(GooglePayIconBase);
 
 interface ExpressCheckoutProps {
 	/** Callback when Apple Pay is clicked */
