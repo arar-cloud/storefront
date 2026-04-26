@@ -34,7 +34,6 @@ const SkeletonFallback = () => (
 			</div>
 		</main>
 	</div>
-	</Suspense>
 );
 
 /**
@@ -44,16 +43,16 @@ const SkeletonFallback = () => (
  */
 export const OrderConfirmationSkeleton = () => (
 	<Suspense fallback={<SkeletonFallback />}>
-	<div className="min-h-screen animate-skeleton-delayed bg-secondary opacity-0">
-		{/* Real header at step 4 */}
-		<CheckoutHeader step={4} onStepClick={() => {}} />
+		<div className="min-h-screen animate-skeleton-delayed bg-secondary opacity-0">
+			{/* Real header at step 4 */}
+			<CheckoutHeader step={4} onStepClick={() => {}} />
 
-		{/* Main content */}
-		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-			<div className="flex flex-col gap-8 md:flex-row">
-				{/* Left column - Confirmation content */}
-				<div className="order-2 min-w-0 flex-1 md:order-1">
-					<div className="rounded-lg border border-border bg-card p-6 md:p-8">
+			{/* Main content */}
+			<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+				<div className="flex flex-col gap-8 md:flex-row">
+					{/* Left column - Confirmation content */}
+					<div className="order-2 min-w-0 flex-1 md:order-1">
+						<div className="rounded-lg border border-border bg-card p-6 md:p-8">
 						<div className="space-y-8">
 							{/* Success header */}
 							<div className="space-y-4 text-center">
