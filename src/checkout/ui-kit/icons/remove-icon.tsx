@@ -1,6 +1,11 @@
 import { SvgContainer, type SvgProps } from "./svg-container";
+import { memo } from "react";
 
-export const RemoveIcon = (props: SvgProps) => (
+/**
+ * Remove icon for delete/clear actions.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
+ */
+export const RemoveIcon = memo((props: SvgProps) => (
 	<SvgContainer size={24} fill="none" {...props}>
 		<path
 			fillRule="evenodd"

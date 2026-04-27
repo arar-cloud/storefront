@@ -24,7 +24,13 @@ const sizeClasses = {
  * ```
  */
 export const LoadingSpinner = ({ size = "sm", className }: LoadingSpinnerProps) => (
-	<div className={cn(sizeClasses[size], "animate-spin", className)}>
+	<div 
+		className={cn(sizeClasses[size], "animate-spin", className)}
+		style={{
+			willChange: "transform",
+			transformOrigin: "center",
+		}}
+	>
 		<svg viewBox="0 0 24 24" className="h-full w-full">
 			<circle
 				className="opacity-25"

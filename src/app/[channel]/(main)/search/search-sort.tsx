@@ -1,5 +1,22 @@
 "use client";
 
+import { useCallback, useRef, useEffect, useState } from "react";
+
+// Debounce hook for search input
+function useDebounce<T>(value: T, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
 	DropdownMenu,
@@ -19,7 +36,24 @@ const SORT_OPTIONS = [
 	{ value: "newest", label: "Newest" },
 ] as const;
 
-export function SearchSort() {
+interface SearchSortProps {
+  onSearch?: (query: string) => void;
+}
+
+export function SearchSort(props: SearchSortProps) {
+	const [query, setQuery] = useState("");
+	const debouncedQuery = useDebounce(query, 300);
+	const prevQueryRef = useRef(debouncedQuery);
+
+	// Only trigger search when debounced query actually changes
+	useEffect(() => {
+		if (debouncedQuery !== prevQueryRef.current) {
+			prevQueryRef.current = debouncedQuery;
+			// Trigger search with debounced query
+			props.onSearch?.(debouncedQuery);
+		}
+	}, [debouncedQuery, props]);
+
 	const router = useRouter();
 	const pathname = usePathname();
 	const searchParams = useSearchParams();

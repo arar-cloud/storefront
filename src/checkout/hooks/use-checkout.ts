@@ -13,18 +13,25 @@ export const useCheckout = ({ pause = false } = {}) => {
 	// Pause the query if there's no checkout ID
 	const shouldPause = pause || !id;
 
+	const variables = useMemo(
+		() => ({ id: id || "", languageCode: localeConfig.graphqlLanguageCode }),
+		[id],
+	);
+
 	const [{ data, fetching, stale }, refetch] = useCheckoutQuery({
-		variables: { id: id || "", languageCode: localeConfig.graphqlLanguageCode },
+		variables,
 		pause: shouldPause,
 	});
+
+	const memoizedRefetch = useCallback(refetch, [refetch]);
 
 	return useMemo(
 		() => ({
 			checkout: data?.checkout as Checkout,
 			fetching: fetching || stale,
-			refetch,
+			refetch: memoizedRefetch,
 			hasCheckoutId: !!id,
 		}),
-		[data?.checkout, fetching, refetch, stale, id],
+		[data?.checkout, fetching, memoizedRefetch, stale, id],
 	);
 };

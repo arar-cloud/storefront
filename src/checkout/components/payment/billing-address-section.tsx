@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC, useState, useEffect } from "react";
+import { type FC, useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Label } from "@/ui/components/ui/label";
 import { Checkbox } from "@/ui/components/ui/checkbox";
@@ -147,9 +147,25 @@ export const BillingAddressSection: FC<BillingAddressSectionProps> = ({
 		}
 	};
 
-	const updateField = (field: string, value: string) => {
+	const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+	const updateField = useCallback((field: string, value: string) => {
+		// Update UI immediately for responsive feel
 		setFormData((prev) => ({ ...prev, [field]: value }));
-	};
+		
+		// Clear pending validation
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+		}
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+		};
+	}, []);
 
 	const handleCountryChange = (value: string) => {
 		setCountryCode(value as CountryCode);

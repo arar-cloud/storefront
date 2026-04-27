@@ -1,9 +1,15 @@
 import { type FC, type SVGProps } from "react";
+/**
+ * Lock icon for password/security fields.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
+ */
+import { memo } from "react";
 
 /**
  * Lock icon for secure checkout badge.
+ * Memoized to prevent unnecessary re-renders when parent updates but props remain identical.
  */
-export const LockIcon: FC<SVGProps<SVGSVGElement>> = (props) => (
+export const LockIcon: FC<SVGProps<SVGSVGElement>> = memo((props) => (
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		viewBox="0 0 24 24"

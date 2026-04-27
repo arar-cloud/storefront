@@ -48,6 +48,22 @@ function LoginSkeleton() {
 	);
 }
 
+async function AuthRedirectBoundary({ channel }: { channel: string }) {
+	try {
+		const cookieStore = await cookies();
+		const result = await executeAuthenticatedGraphQL(CurrentUserDocument, {
+			cache: "no-cache",
+		});
+
+		if (result.ok && result.data.me) {
+			redirect(`/${channel}`);
+		}
+	} catch {
+		// Auth check failed; allow form to render; user can retry
+	}
+	return null;
+}
+
 async function LoginContent({ params: paramsPromise }: { params: Promise<{ channel: string }> }) {
 	const { channel } = await paramsPromise;
 
@@ -59,21 +75,16 @@ async function LoginContent({ params: paramsPromise }: { params: Promise<{ chann
 		// Static generation -- cookies() unavailable
 	}
 
-	if (hasCookies) {
-		const result = await executeAuthenticatedGraphQL(CurrentUserDocument, {
-			cache: "no-cache",
-		});
-
-		if (result.ok && result.data.me) {
-			redirect(`/${channel}`);
-		}
-	}
-
 	return (
 		<section className="mx-auto max-w-7xl p-8 pb-24">
 			<AuthProvider>
 				<LoginForm />
 			</AuthProvider>
+			{hasCookies && (
+				<Suspense fallback={null}>
+					<AuthRedirectBoundary channel={channel} />
+				</Suspense>
+			)}
 		</section>
 	);
 }

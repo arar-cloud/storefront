@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { type CountryCode, useChannelQuery } from "@/checkout/graphql";
+import { useQuery } from "urql";
+import { COUNTRIES_AND_VALIDATION_QUERY } from "@/checkout/graphql/queries";
 import { useCheckout } from "@/checkout/hooks/use-checkout";
 
 interface UseAvailableShippingCountries {
@@ -8,8 +10,8 @@ interface UseAvailableShippingCountries {
 
 export const useAvailableShippingCountries = (): UseAvailableShippingCountries => {
 	const { checkout } = useCheckout();
-	const [{ data }] = useChannelQuery({
-		variables: { slug: checkout?.channel?.slug || "" },
+	const [{ data }] = useQuery(COUNTRIES_AND_VALIDATION_QUERY, {
+		variables: useMemo(() => ({ channelSlug: checkout?.channel?.slug || "" }), [checkout?.channel?.slug]),
 		pause: !checkout?.channel?.slug,
 	});
 

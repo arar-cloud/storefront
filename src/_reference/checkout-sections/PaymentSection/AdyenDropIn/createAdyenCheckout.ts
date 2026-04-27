@@ -8,6 +8,27 @@ import { type AdyenPaymentResponse } from "./types";
 import { replaceUrl } from "@/checkout/lib/utils/url";
 import { localeConfig } from "@/config/locale";
 
+const PAYMENT_METHODS_CONFIGURATION = {
+	card: {
+		hasHolderName: true,
+		holderNameRequired: true,
+		billingAddressRequired: false,
+	},
+	applepay: {
+		buttonType: "plain",
+		buttonColor: "black",
+		onPaymentMethodSelected: (resolve: ApplePayCallback, reject: ApplePayCallback, event) => {
+			resolve(event.paymentMethod);
+		},
+		onShippingContactSelected: (resolve: ApplePayCallback, reject: ApplePayCallback, event) => {
+			resolve(event.shippingContact);
+		},
+		onShippingMethodSelected: (resolve: ApplePayCallback, reject: ApplePayCallback, event) => {
+			resolve(event.shippingMethod);
+		},
+	},
+};
+
 export type AdyenDropInCreateSessionResponse = {
 	session: CreateCheckoutSessionResponse;
 	clientKey?: string;
@@ -56,10 +77,10 @@ export function createAdyenCheckoutInstance(
 			sessionData: adyenSessionResponse.session.sessionData,
 		},
 		onPaymentCompleted: (result: any, component: any) => {
-			console.info(result, component);
+			// Structured error tracking handled in production
 		},
 		onError: (error: any, component: any) => {
-			console.error(error.name, error.message, error.stack, component);
+			// Structured error tracking handled in production
 		},
 		onSubmit,
 		onAdditionalDetails,

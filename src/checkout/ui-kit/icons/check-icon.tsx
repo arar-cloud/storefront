@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { SvgContainer, type SvgProps } from "./svg-container";
 
-export const CheckIcon = (props: SvgProps) => (
+export const CheckIcon = memo((props: SvgProps) => (
 	<SvgContainer size={20} fill="none" {...props}>
 		<path d="M5 10L8 13L15 7" stroke="currentColor" strokeWidth="2" />
 	</SvgContainer>
-);
+));

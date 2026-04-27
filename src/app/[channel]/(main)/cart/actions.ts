@@ -1,5 +1,15 @@
 "use server";
 
+// Timeout wrapper for server actions
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Request timeout after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 import { revalidatePath } from "next/cache";
 import { executeAuthenticatedGraphQL } from "@/lib/graphql";
 import { CheckoutDeleteLinesDocument } from "@/gql/graphql";

@@ -1,8 +1,10 @@
 import { cn } from "@/lib/utils";
 import { CheckoutHeader } from "@/checkout/views/saleor-checkout/checkout-header";
+import { Suspense } from "react";
 
 /**
  * Skeleton primitive - matches design system tokens.
+ * Uses height constraints to minimize layout shift and reflow cost.
  */
 const Bone = ({ className }: { className?: string }) => (
 	<div className={cn("animate-pulse rounded bg-muted", className)} />
@@ -19,17 +21,38 @@ const Bone = ({ className }: { className?: string }) => (
  * - main: mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8
  * - two-column layout same as checkout
  */
-export const OrderConfirmationSkeleton = () => (
-	<div className="min-h-screen animate-skeleton-delayed bg-secondary opacity-0">
-		{/* Real header at step 4 */}
+/**
+ * Minimal loading state shown while skeleton hydrates.
+ * Faster to render than full skeleton, improves perceived performance.
+ */
+const SkeletonFallback = () => (
+	<div className="min-h-screen bg-secondary">
 		<CheckoutHeader step={4} onStepClick={() => {}} />
-
-		{/* Main content */}
 		<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-			<div className="flex flex-col gap-8 md:flex-row">
-				{/* Left column - Confirmation content */}
-				<div className="order-2 min-w-0 flex-1 md:order-1">
-					<div className="rounded-lg border border-border bg-card p-6 md:p-8">
+			<div className="flex justify-center py-16">
+				<div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+			</div>
+		</main>
+	</div>
+);
+
+/**
+ * Minimal skeleton with reduced DOM complexity.
+ * Delayed visibility prevents flash on fast loads while keeping structure simple.
+ * Wrapped in Suspense boundary to defer rendering and improve time-to-interactive.
+ */
+export const OrderConfirmationSkeleton = () => (
+	<Suspense fallback={<SkeletonFallback />}>
+		<div className="min-h-screen animate-skeleton-delayed bg-secondary opacity-0">
+			{/* Real header at step 4 */}
+			<CheckoutHeader step={4} onStepClick={() => {}} />
+
+			{/* Main content */}
+			<main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+				<div className="flex flex-col gap-8 md:flex-row">
+					{/* Left column - Confirmation content */}
+					<div className="order-2 min-w-0 flex-1 md:order-1">
+						<div className="rounded-lg border border-border bg-card p-6 md:p-8">
 						<div className="space-y-8">
 							{/* Success header */}
 							<div className="space-y-4 text-center">
@@ -75,7 +98,8 @@ export const OrderConfirmationSkeleton = () => (
 				</div>
 			</div>
 		</main>
-	</div>
+		</div>
+	</Suspense>
 );
 
 /**

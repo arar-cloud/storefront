@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC } from "react";
+import { useMemo } from "react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
 
 export interface SignedInUserProps {
@@ -22,6 +22,8 @@ export interface SignedInUserProps {
 export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut }) => {
 	const { signOut } = useSaleorAuthContext();
 
+	const avatarLetter = useMemo(() => user.email.charAt(0).toUpperCase(), [user.email]);
+
 	const handleSignOut = () => {
 		signOut();
 		onSignOut();
@@ -31,7 +33,7 @@ export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut }) => {
 		<div className="bg-muted/30 flex items-center justify-between gap-3 rounded-lg border border-border p-4">
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-					{user.email.charAt(0).toUpperCase()}
+					{avatarLetter}
 				</div>
 				<div className="min-w-0 flex-1">
 					<p className="break-words font-medium">{user.email}</p>
