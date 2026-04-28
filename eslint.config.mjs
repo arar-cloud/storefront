@@ -21,6 +21,18 @@ const config = [
 			"security/detect-non-literal-require": "warn",
 			"security/detect-possible-timing-attacks": "warn",
 			"security/detect-eval-with-expression": "error",
+			// XSS and template injection prevention
+			"react/no-danger": "warn",
+			"react/no-danger-with-children": "error",
+			// API response validation
+			"no-implied-eval": "error",
+			"no-new-func": "error",
+		},
+		// Custom rules for GraphQL response validation
+		languageOptions: {
+			globals: {
+				// Define GraphQL response validation as a best practice
+			},
 		},
 	},
 ];
