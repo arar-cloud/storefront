@@ -16,6 +16,11 @@ export const usePaymentGatewaysInitialize = () => {
 	const [gatewayConfigs, setGatewayConfigs] = useState<ParsedPaymentGateways>([]);
 	const previousBillingCountry = useRef(billingCountry);
 
+	const filteredGateways = useMemo(
+		() => getFilteredPaymentGateways(availablePaymentGateways),
+		[availablePaymentGateways]
+	);
+
 	const [{ fetching }, paymentGatewaysInitialize] = usePaymentGatewaysInitializeMutation();
 
 	const onSubmit = useSubmit<{}, typeof paymentGatewaysInitialize>(
@@ -27,7 +32,7 @@ export const usePaymentGatewaysInitialize = () => {
 				onSubmit: paymentGatewaysInitialize,
 				parse: () => ({
 					checkoutId,
-					paymentGateways: getFilteredPaymentGateways(availablePaymentGateways).map(({ config, id }) => ({
+					paymentGateways: filteredGateways.map(({ config, id }) => ({
 						id,
 						data: config,
 					})),
