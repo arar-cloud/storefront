@@ -7,11 +7,42 @@ const config = {
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Aggressive optimization: serve only modern formats on capable browsers
+    unoptimized: false,
+    quality: 75,
   },
   webpack: (config, { isServer }) => {
-    // Split vendor code for better caching
+    // Aggressive code splitting for faster initial load and better caching
     if (!isServer) {
       config.optimization.splitChunks.cacheGroups = {
+        // Extract Next.js internals to separate chunk
+        nextInternals: {
+          test: /[\\/]node_modules[\\/]next[\\/]/,
+          name: 'next-internals',
+          priority: 40,
+          reuseExistingChunk: true,
+        },
+        // Extract React and React DOM
+        react: {
+          test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+          name: 'react-vendors',
+          priority: 30,
+          reuseExistingChunk: true,
+        },
+        // Extract all other vendor code
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          priority: 20,
+          reuseExistingChunk: true,
+        },
+        // Extract common code shared between chunks
+        common: {
+          minChunks: 2,
+          priority: 10,
+          reuseExistingChunk: true,
+          name: 'common',
+        },
         ...config.optimization.splitChunks.cacheGroups,
         vendor: {
           test: /[\\/]node_modules[\\/]/,
