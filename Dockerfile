@@ -20,11 +20,13 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# Copy package files first for layer caching
+# Copy only package files for dependency layer caching
 COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies in isolated layer to leverage Docker cache
 RUN pnpm i --frozen-lockfile --prefer-offline
 
-# Copy source code after dependencies layer
+# Copy entire source code after dependencies are cached
 COPY . .
 
 # Next.js collects completely anonymous telemetry data about general usage.
