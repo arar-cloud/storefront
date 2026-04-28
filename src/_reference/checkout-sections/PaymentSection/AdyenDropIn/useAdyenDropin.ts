@@ -1,6 +1,7 @@
 import type DropinElement from "@adyen/adyen-web/dist/types/components/Dropin";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { camelCase } from "lodash-es";
+import { CircuitBreaker } from "@/lib/circuit-breaker";
 import { apiErrorMessages } from "../errorMessages";
 import {
 	type TransactionInitializeMutationVariables,
@@ -49,6 +50,14 @@ const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 2000;
 const MAX_DELAY_MS = 8000;
 
+// Circuit breaker for Adyen API degradation handling
+const createAdyenCircuitBreaker = () =>
+	new CircuitBreaker({
+		failureThreshold: 0.5,
+		windowSize: 10,
+		timeoutMs: 60000,
+	});
+
 export const useAdyenDropin = (props: AdyenDropinProps) => {
 	const { config } = props;
 	const { id } = config;
@@ -81,6 +90,7 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 	const initializationInProgressRef = useRef(false);
 	const initializationPromiseRef = useRef<Promise<void> | null>(null);
+	const adyenCircuitBreakerRef = useRef(createAdyenCircuitBreaker());
 
 	const anyRequestsInProgress = areAnyRequestsInProgress({ updateState, loadingCheckout, ...rest });
 
@@ -247,6 +257,16 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 	// handler for when user presses submit in the dropin
 	const onSubmitInitialize: AdyenCheckoutInstanceOnSubmit = useEvent(async (state, component) => {
+		const breaker = adyenCircuitBreakerRef.current;
+		if (breaker.getState() === "OPEN") {
+			showCustomErrors([
+				{
+					message: "Payment service is temporarily unavailable. Please try again in a moment.",
+				},
+			]);
+			component.setStatus("ready");
+			return;
+		}
 		component.setStatus("loading");
 		setAdyenCheckoutSubmitParams({ state, component });
 		validateAllForms(authenticated);
@@ -278,10 +298,16 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 		// there is a previous transaction going on, we want to process instead of initialize
 		if (currentTransactionId) {
-			void onTransactionProccess({
-				data: adyenCheckoutSubmitParams?.state.data,
-				id: currentTransactionId,
-			});
+			const breaker = adyenCircuitBreakerRef.current;
+			try {
+				void onTransactionProccess({
+					data: adyenCheckoutSubmitParams?.state.data,
+					id: currentTransactionId,
+				});
+			} catch (error) {
+				breaker.recordFailure();
+				throw error;
+			}
 			return;
 		}
 
