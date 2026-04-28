@@ -1,5 +1,5 @@
 import type DropinElement from "@adyen/adyen-web/dist/types/components/Dropin";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { camelCase } from "lodash-es";
 import { apiErrorMessages } from "../errorMessages";
 import {
@@ -44,6 +44,11 @@ export interface AdyenDropinProps {
 	config: ParsedAdyenGateway;
 }
 
+// Constants for retry logic
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 2000;
+const MAX_DELAY_MS = 8000;
+
 export const useAdyenDropin = (props: AdyenDropinProps) => {
 	const { config } = props;
 	const { id } = config;
@@ -73,6 +78,9 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 		state: AdyenCheckoutInstanceState;
 		component: DropinElement;
 	} | null>(null);
+
+	const initializationInProgressRef = useRef(false);
+	const initializationPromiseRef = useRef<Promise<void> | null>(null);
 
 	const anyRequestsInProgress = areAnyRequestsInProgress({ updateState, loadingCheckout, ...rest });
 
@@ -129,6 +137,22 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 			setCurrentTransactionId,
 			showCustomErrors,
 		],
+	);
+
+	const executeWithRetry = useCallback(
+		async <T,>(fn: () => Promise<T>, retryCount = 0): Promise<T> => {
+			try {
+				return await fn();
+			} catch (error) {
+				if (retryCount < MAX_RETRIES) {
+					const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS);
+					await new Promise(resolve => setTimeout(resolve, delay));
+					return executeWithRetry(fn, retryCount + 1);
+				}
+				throw error;
+			}
+		},
+		[],
 	);
 
 	const onTransactionInitialize = useSubmit<
