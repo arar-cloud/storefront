@@ -16,8 +16,15 @@ module.exports = {
       corePlugins: {
         preflight: true,
       },
+      // Enable aggressive purging in production
+      purge: {
+        enabled: process.env.NODE_ENV === 'production',
+        mode: 'layers',
+      },
     },
-    autoprefixer: {},
+    autoprefixer: {
+      overrideBrowserslist: ['> 1%', 'last 2 versions'],
+    },
     ...(process.env.NODE_ENV === 'production' && {
       cssnano: {
         preset: ['default', {
