@@ -10,8 +10,8 @@
 		"dev:turbopack": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"predev": "pnpm run generate:all",
-		"prebuild": "pnpm run generate:all",
+		"predev": "node scripts/conditional-generate.mjs",
+		"prebuild": "node scripts/conditional-generate.mjs",
 		"lint": "eslint",
 		"lint:fix": "eslint --fix",
 		"generate": "graphql-codegen --config .graphqlrc.ts",
@@ -20,6 +20,7 @@
 		"test": "vitest",
 		"test:run": "vitest run",
 		"knip": "knip",
+		"generate:conditional": "node scripts/conditional-generate.mjs",
 		"prepare": "husky install"
 	},
 	"dependencies": {
