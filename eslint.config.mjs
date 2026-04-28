@@ -1,5 +1,6 @@
 import nextVitals from "eslint-config-next/core-web-vitals";
 import security from "eslint-plugin-security";
+import graphql from "eslint-plugin-graphql";
 
 const config = [
 	...nextVitals,
@@ -20,6 +21,10 @@ const config = [
 			"security/detect-non-literal-fs-filename": "warn",
 			"security/detect-non-literal-require": "warn",
 			"security/detect-possible-timing-attacks": "warn",
+			"security/detect-non-literal-regexp": "error",
+			"security/detect-eval-with-expression": "error",
+			"security/no-unsafe-innerhtml": "error",
+			"security/no-unsanitized-innerhtml": "error",
 			"security/detect-eval-with-expression": "error",
 			// XSS and template injection prevention
 			"react/no-danger": "warn",
@@ -33,6 +38,23 @@ const config = [
 			globals: {
 				// Define GraphQL response validation as a best practice
 			},
+		},
+	},
+	{
+		files: ["**/*.graphql"],
+		plugins: {
+			graphql,
+		},
+		rules: {
+			"graphql/template-strings": [
+				"error",
+				{
+					env: "relay",
+					againstSchema: process.env.NEXT_PUBLIC_SALEOR_API_URL,
+				},
+			],
+			"graphql/no-deprecated-fields": "warn",
+			"graphql/naming-convention": ["warn", { allowLeadingUnderscore: false }],
 		},
 	},
 ];
