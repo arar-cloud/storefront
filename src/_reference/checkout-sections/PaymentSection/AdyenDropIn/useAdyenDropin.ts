@@ -4,6 +4,14 @@ import { camelCase } from "lodash-es";
 import { CircuitBreaker } from "@/lib/circuit-breaker";
 import { isAdyenError } from "./types";
 import { apiErrorMessages, getAdyenErrorMessage } from "../errorMessages";
+
+/**
+ * Generate a unique idempotency token for payment submissions.
+ * Ensures duplicate submissions during retries are safely deduplicated.
+ */
+function generateIdempotencyToken(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 import {
 	type TransactionInitializeMutationVariables,
 	type TransactionProcessMutationVariables,
@@ -91,8 +99,14 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 	const initializationInProgressRef = useRef(false);
 	const initializationPromiseRef = useRef<Promise<void> | null>(null);
+	const deduplicationMapRef = useRef<Map<string, Promise<void>>>(new Map());
+	const inFlightRequestsRef = useRef<Map<string, Promise<AdyenPaymentResponse>>>(new Map());
+	const idempotencyTokenRef = useRef<string | null>(null);
 	const adyenCircuitBreakerRef = useRef(createAdyenCircuitBreaker());
 	const cssLoadedRef = useRef(false);
+	const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+	const abortControllerRef = useRef<AbortController | null>(null);
+	const PAYMENT_TIMEOUT_MS = 30000;
 
 	const anyRequestsInProgress = areAnyRequestsInProgress({ updateState, loadingCheckout, ...rest });
 
@@ -152,17 +166,32 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 	);
 
 	const executeWithRetry = useCallback(
-		async <T,>(fn: () => Promise<T>, retryCount = 0): Promise<T> => {
-			try {
-				return await fn();
-			} catch (error) {
-				if (retryCount < MAX_RETRIES) {
-					const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS);
-					await new Promise(resolve => setTimeout(resolve, delay));
-					return executeWithRetry(fn, retryCount + 1);
-				}
-				throw error;
+		async <T,>(fn: () => Promise<T>, requestKey?: string, retryCount = 0): Promise<T> => {
+			if (requestKey && deduplicationMapRef.current.has(requestKey)) {
+				return deduplicationMapRef.current.get(requestKey) as Promise<T>;
 			}
+
+			const executeAttempt = async (): Promise<T> => {
+				try {
+					return await fn();
+				} catch (error) {
+					if (retryCount < MAX_RETRIES) {
+						const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS);
+						await new Promise(resolve => setTimeout(resolve, delay));
+						return executeWithRetry(fn, requestKey, retryCount + 1);
+					}
+					throw error;
+				}
+			};
+
+			if (requestKey) {
+				const promise = executeAttempt() as Promise<any>;
+				deduplicationMapRef.current.set(requestKey, promise);
+				promise.finally(() => deduplicationMapRef.current.delete(requestKey));
+				return promise;
+			}
+
+			return executeAttempt();
 		},
 		[],
 	);
@@ -291,6 +320,15 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 		return () => {
 			clearInterval(checkInterval);
 			clearTimeout(timeoutId);
+			// Cleanup payment timers and abort signals on unmount
+			if (timeoutIdRef.current) {
+				clearTimeout(timeoutIdRef.current);
+				timeoutIdRef.current = null;
+			}
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+				abortControllerRef.current = null;
+			}
 		};
 	}, []);
 
@@ -306,11 +344,46 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 			component.setStatus("ready");
 			return;
 		}
-		component.setStatus("loading");
-		setAdyenCheckoutSubmitParams({ state, component });
-		validateAllForms(authenticated);
-		setShouldRegisterUser(true);
-		setSubmitInProgress(true);
+
+		if (initializationInProgressRef.current) {
+			if (initializationPromiseRef.current) {
+				return initializationPromiseRef.current;
+			}
+			return Promise.resolve();
+		}
+
+		initializationInProgressRef.current = true;
+		const initPromise = (async () => {
+			try {
+				component.setStatus("loading");
+				// Setup abort signal for timeout handling
+				if (abortControllerRef.current) {
+					abortControllerRef.current.abort();
+				}
+				abortControllerRef.current = new AbortController();
+
+				// Set payment timeout
+				if (timeoutIdRef.current) {
+					clearTimeout(timeoutIdRef.current);
+				}
+				timeoutIdRef.current = setTimeout(() => {
+					abortControllerRef.current?.abort();
+					setAdyenCheckoutSubmitParams(null);
+					setSubmitInProgress(false);
+					showCustomErrors([{ message: "Payment request timed out. Please try again." }]);
+					adyenCheckoutSubmitParams?.component.setStatus("ready");
+				}, PAYMENT_TIMEOUT_MS);
+
+				setAdyenCheckoutSubmitParams({ state, component });
+				validateAllForms(authenticated);
+				setShouldRegisterUser(true);
+				setSubmitInProgress(true);
+			} finally {
+				initializationInProgressRef.current = false;
+			}
+		})();
+		initializationPromiseRef.current = initPromise;
+		return initPromise;
 	});
 
 	// when submission is initialized, awaits for all the other requests to finish,
@@ -350,17 +423,20 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 			return;
 		}
 
-		void onTransactionInitialize({
-			checkoutId,
-			amount: totalPrice.gross.amount,
-			paymentGateway: {
-				id,
-				data: {
-					...adyenCheckoutSubmitParams.state.data,
-					returnUrl: getUrlForTransactionInitialize()?.newUrl,
+		void executeWithRetry(
+			() => onTransactionInitialize({
+				checkoutId,
+				amount: totalPrice.gross.amount,
+				paymentGateway: {
+					id,
+					data: {
+						...adyenCheckoutSubmitParams.state.data,
+						returnUrl: getUrlForTransactionInitialize()?.newUrl,
+					},
 				},
-			},
-		});
+			}),
+			`initialize-${checkoutId}`,
+		);
 	}, [
 		adyenCheckoutSubmitParams,
 		anyRequestsInProgress,

@@ -59,7 +59,22 @@ if (!schema) {
 		"GraphQL code generation failed: NEXT_PUBLIC_SALEOR_API_URL environment variable is not set, and no cached schema found."
 	);
 	console.error("Follow development instructions in the README.md file.");
+	console.error("");
+	console.error("To fix this:");
+	console.error("  1. Set NEXT_PUBLIC_SALEOR_API_URL in your .env.local file");
+	console.error("  2. Run: pnpm run generate");
+	console.error("  3. Commit the generated .graphql-schema-cache.json for offline builds");
 	process.exit(1);
+}
+
+// Store schema URL in cache for offline fallback on next run
+try {
+	const cacheData = { schema, timestamp: new Date().toISOString() };
+	fs.writeFileSync(SCHEMA_CACHE_FILE, JSON.stringify(cacheData, null, 2));
+	console.log(`✓ GraphQL schema cached for offline fallback: ${SCHEMA_CACHE_FILE}`);
+} catch (e) {
+	console.warn(`⚠️  Failed to write schema cache: ${(e as Error).message}`);
+	// Continue anyway - caching is optional
 }
 
 const schemaUrl = schema;
