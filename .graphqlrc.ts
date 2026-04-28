@@ -56,12 +56,68 @@ if (!schemaUrl) {
 }
 
 // Request cache to deduplicate introspection calls and prevent N+1 queries
+import { createHash } from "crypto";
+import { existsSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
+
+const CACHE_DIR = "./.graphql-cache";
+const SCHEMA_CACHE_FILE = join(CACHE_DIR, "schema.json");
+
+const getCacheKey = (url: string, options: RequestInit) => {
+	const hash = createHash("sha256");
+	hash.update(`${url}:${JSON.stringify(options?.body || "")}`);
+	return hash.digest("hex");
+};
+
+const loadSchemaFromCache = () => {
+	try {
+		if (existsSync(SCHEMA_CACHE_FILE)) {
+			const cached = readFileSync(SCHEMA_CACHE_FILE, "utf-8");
+			return JSON.parse(cached);
+		}
+	} catch (e) {
+		// Ignore cache errors, fall through to fetch
+	}
+	return null;
+};
+
+const saveSchemaToCache = (schema: any) => {
+	try {
+		if (!existsSync(CACHE_DIR)) {
+			require("fs").mkdirSync(CACHE_DIR, { recursive: true });
+		}
+		writeFileSync(SCHEMA_CACHE_FILE, JSON.stringify(schema, null, 2));
+	} catch (e) {
+		// Ignore cache write errors
+	}
+};
+
 const requestCache = new Map<string, Promise<any>>();
 
 const cachedFetch = async (url: string, options: RequestInit) => {
-	const cacheKey = `${url}:${JSON.stringify(options?.body || "")}`;
+	const cacheKey = getCacheKey(url, options);
+	
+	// For introspection queries (schema fetches), check file-based cache first
+	if (options?.body && typeof options.body === "string" && options.body.includes("__schema")) {
+		const cached = loadSchemaFromCache();
+		if (cached) {
+			return Promise.resolve(cached);
+		}
+	}
+	
 	if (!requestCache.has(cacheKey)) {
-		requestCache.set(cacheKey, fetch(url, options).then(r => r.json()));
+		requestCache.set(
+			cacheKey,
+			fetch(url, options)
+				.then(r => r.json())
+				.then(data => {
+					// Cache schema for next run
+					if (options?.body && typeof options.body === "string" && options.body.includes("__schema")) {
+						saveSchemaToCache(data);
+					}
+					return data;
+				})
+		);
 	}
 	return requestCache.get(cacheKey)!;
 };
