@@ -35,9 +35,21 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Request cache to deduplicate introspection calls and prevent N+1 queries
+const requestCache = new Map<string, Promise<any>>();
+
+const cachedFetch = async (url: string, options: RequestInit) => {
+	const cacheKey = `${url}:${JSON.stringify(options?.body || "")}`;
+	if (!requestCache.has(cacheKey)) {
+		requestCache.set(cacheKey, fetch(url, options).then(r => r.json()));
+	}
+	return requestCache.get(cacheKey)!;
+};
+
 const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
+	fetch: cachedFetch,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
