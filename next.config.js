@@ -81,6 +81,28 @@ const config = {
 					]
 				: []),
 			{
+				// Product and category pages - ISR with SWR caching
+				// Revalidate every 1 hour (3600s) on-demand; serve stale content while revalidating
+				source: "/products/:path*",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "public, max-age=3600, s-maxage=3600, stale-while-revalidate=604800",
+					},
+				],
+			},
+			{
+				// Category pages - ISR with SWR caching
+				// Revalidate every 1 hour (3600s) on-demand; serve stale content while revalidating
+				source: "/categories/:path*",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "public, max-age=3600, s-maxage=3600, stale-while-revalidate=604800",
+					},
+				],
+			},
+			{
 				// Static assets - cache for 1 year (immutable with hash in filename)
 				source: "/_next/static/:path*",
 				headers: [
