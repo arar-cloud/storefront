@@ -21,23 +21,52 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+const fs = require("fs");
+const path = require("path");
+
+// Fallback schema cache for offline/local development support
+const SCHEMA_CACHE_FILE = path.join(process.cwd(), ".graphql-schema-cache.json");
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
 }
 
-if (!schemaUrl) {
+// Determine schema source with fallback strategy
+let schema: string | undefined;
+
+if (schemaUrl) {
+	// Primary: Use API URL if available
+	schema = schemaUrl;
+} else if (fs.existsSync(SCHEMA_CACHE_FILE)) {
+	// Secondary: Use cached schema if API URL unavailable
+	try {
+		const cacheData = JSON.parse(fs.readFileSync(SCHEMA_CACHE_FILE, "utf8"));
+		if (cacheData.schema) {
+			console.warn(
+				"⚠️  NEXT_PUBLIC_SALEOR_API_URL not set. Using cached schema for code generation. This may be stale."
+			);
+			schema = cacheData.schema;
+		}
+	} catch (e) {
+		// Cache file corrupted or unreadable
+	}
+}
+
+if (!schema) {
 	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
+		"GraphQL code generation failed: NEXT_PUBLIC_SALEOR_API_URL environment variable is not set, and no cached schema found."
 	);
 	console.error("Follow development instructions in the README.md file.");
 	process.exit(1);
 }
 
+const schemaUrl = schema;
+
 const config: CodegenConfig = {
 	overwrite: true,
-	schema: schemaUrl,
+	schema: schema,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
