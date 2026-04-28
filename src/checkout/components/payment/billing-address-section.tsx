@@ -75,6 +75,8 @@ export const BillingAddressSection: FC<BillingAddressSectionProps> = ({
 	onSameAsShippingChange,
 	initialSameAsShipping,
 }) => {
+	// Memoize onChange to prevent unnecessary effect reruns
+	const memoizedOnChange = onChange;
 	const { availableShippingCountries } = useAvailableShippingCountries();
 
 	const hasShippingAddress = !!shippingAddress;
