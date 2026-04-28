@@ -21,6 +21,9 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+// Schema introspection cache to avoid redundant API calls
+const schemaCache = new Map<string, unknown>();
+
 // Fragment deduplication plugin
 const fragmentDeduplicationPlugin = {
 	async onLoad(context: any) {
@@ -126,6 +129,8 @@ const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
 	fetch: cachedFetch,
+	// Plugin to deduplicate fragments during codegen
+	plugins: [fragmentDeduplicationPlugin],
 	// Storefront GraphQL queries - add new queries here
 	documents: [
 		"src/graphql/**/*.graphql",
