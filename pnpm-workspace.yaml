@@ -1,3 +1,18 @@
 blockExoticSubdeps: true
 minimumReleaseAge: 1440 # 24h
 trustPolicy: no-downgrade
+
+# Package resolution overrides for stability and security
+pnpm:
+  overrides:
+    # Lock payment-critical versions to prevent transient failures
+    'urql': '4.0.6'
+    '@saleor/auth-sdk': '1.0.3'
+    '@adyen/adyen-web': '*'
+    # Security patches
+    'graphql': '16.8.1'
+    'dset': '>=3.1.4'
+    'micromatch': '>=4.0.8'
+    '@babel/runtime': '>=7.26.10'
+    '@babel/helpers': '>=7.26.10'
+    'brace-expansion@>=2': '>=2.0.2'
