@@ -163,6 +163,36 @@ const config: CodegenConfig = {
 				fragmentMasking: false,
 			},
 		},
+		"src/checkout/graphql/generated.ts": {
+			preset: "client",
+			plugins: [],
+			config: {
+				documentMode: "string",
+				useTypeImports: true,
+				strictScalars: true,
+				scalars: {
+					Date: "string",
+					DateTime: "string",
+					Day: "number",
+					Decimal: "number",
+					GenericScalar: "unknown",
+					JSON: "unknown",
+					JSONString: "string",
+					Metadata: "Record<string, string>",
+					Hour: "number",
+					Minute: "number",
+					PositiveInt: "number",
+					PositiveDecimal: "number",
+					UUID: "string",
+					Upload: "unknown",
+					WeightScalar: "unknown",
+					_Any: "unknown",
+				},
+			},
+			presetConfig: {
+				fragmentMasking: false,
+			},
+		},
 	},
 };
 
