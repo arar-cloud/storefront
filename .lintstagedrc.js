@@ -14,8 +14,6 @@ const buildEslintCommand = (filenames) => {
 const config = {
 	"*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": [
 		buildEslintCommand,
-		() => "tsc --noEmit",
-		() => "pnpm audit --prod --audit-level=moderate",
 	],
 	"*.*": "prettier --write --ignore-unknown",
 };
