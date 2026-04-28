@@ -1,3 +1,41 @@
+/**
+ * Complete Adyen SDK error response shape with type guards.
+ * Prevents runtime failures from unexpected error structures.
+ */
+export interface AdyenError {
+	errorCode?: string;
+	resultCode?: string;
+	message?: string;
+	errorType?: string;
+	detailErrorCode?: string;
+	detailErrorMessage?: string;
+	pspReference?: string;
+	refusalReason?: string;
+	refusalReasonCode?: string;
+}
+
+/**
+ * Type guard to safely check if object is an AdyenError.
+ */
+export function isAdyenError(value: unknown): value is AdyenError {
+	if (typeof value !== "object" || value === null) return false;
+	const obj = value as Record<string, unknown>;
+	return (
+		typeof obj.errorCode === "string" ||
+		typeof obj.resultCode === "string" ||
+		typeof obj.message === "string" ||
+		typeof obj.errorType === "string"
+	);
+}
+
+/**
+ * Extract error code from Adyen error response with fallbacks.
+ */
+export function getAdyenErrorCode(error: unknown): string | undefined {
+	if (!isAdyenError(error)) return undefined;
+	return error.errorCode || error.resultCode || error.detailErrorCode;
+}
+
 import { type CardElementData } from "@adyen/adyen-web/dist/types/components/Card/types";
 import type DropinElement from "@adyen/adyen-web/dist/types/components/Dropin";
 import { type PaymentMethodsResponse } from "@adyen/adyen-web/dist/types/core/ProcessResponse/PaymentMethodsResponse/types";
