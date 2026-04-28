@@ -21,6 +21,26 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+// Fragment deduplication plugin
+const fragmentDeduplicationPlugin = {
+	async onLoad(context: any) {
+		const fragments = new Map<string, Set<string>>();
+		context.documents.forEach((doc: any) => {
+			doc.definitions
+				.filter((d: any) => d.kind === "FragmentDefinition")
+				.forEach((frag: any) => {
+					const fieldSet = new Set(
+						frag.selectionSet.selections.map((s: any) => s.name?.value)
+					);
+					if (!fragments.has(frag.name.value)) {
+						fragments.set(frag.name.value, fieldSet);
+					}
+				});
+		});
+		context.fragments = fragments;
+	},
+};
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
