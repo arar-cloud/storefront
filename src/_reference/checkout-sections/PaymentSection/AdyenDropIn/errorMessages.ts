@@ -1,3 +1,59 @@
+/**
+ * Categorizes errors into recoverable (can retry) vs fatal (cannot retry)
+ */
+export enum ErrorCategory {
+	RECOVERABLE = "RECOVERABLE", // Network, timeout, circuit breaker open
+	FATAL = "FATAL", // Invalid card, fraud, declined
+	UNKNOWN = "UNKNOWN",
+}
+
+/**
+ * Classify error type for appropriate handling strategy
+ */
+export function classifyAdyenError(error: unknown): ErrorCategory {
+	if (!error || typeof error !== "object") {
+		return ErrorCategory.UNKNOWN;
+	}
+
+	const err = error as Record<string, unknown>;
+	const resultCode = String(err.resultCode || "").toUpperCase();
+	const errorCode = String(err.errorCode || "");
+
+	// Recoverable errors - network, timeout, service degradation
+	if (
+		errorCode === "NetworkError" ||
+		errorCode === "TimeoutError" ||
+		errorCode === "ServiceUnavailable" ||
+		resultCode === "REDIRECT" ||
+		resultCode === "IDENTIFY_SHOPPER"
+	) {
+		return ErrorCategory.RECOVERABLE;
+	}
+
+	// Fatal errors - cannot retry
+	if (
+		resultCode === "REFUSED" ||
+		resultCode === "CANCELLED" ||
+		resultCode === "EXPIRED_CARD" ||
+		resultCode === "INVALID_CARD"
+	) {
+		return ErrorCategory.FATAL;
+	}
+
+	return ErrorCategory.UNKNOWN;
+}
+
+import { getAdyenErrorCode, isAdyenError } from "./types";
+
+/**
+ * Helper to convert camelCase or snake_case strings
+ */
+function camelCase(str: string): string {
+	return str
+		.toLowerCase()
+		.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+}
+
 export const adyenErrorMessages = {
 	refused: "The transaction was refused.",
 	acquirerError: "The transaction did not go through due to an error that occurred on the acquirer's end.",
@@ -45,4 +101,40 @@ export const adyenErrorMessages = {
 	cvmRequiredRestartPayment: "A PIN or signature is required. Retry the transaction.",
 	"3DsAuthenticationError":
 		"The 3D Secure authentication failed due to an issue at the card network or issuer. Retry the transaction, or retry the transaction with a different payment method.",
+};
+
+/**
+ * Safe error message lookup with comprehensive error recovery.
+ * Prevents runtime errors from unmapped Adyen SDK error responses.
+ * Handles both string error codes and Adyen error objects with fallback chain.
+ */
+export const getAdyenErrorMessage = (error?: string | null | unknown): string => {
+	try {
+		let code: string | undefined;
+
+		if (typeof error === "string") {
+			code = error;
+		} else if (isAdyenError(error)) {
+			code = getAdyenErrorCode(error);
+		} else if (typeof error === "object" && error !== null) {
+			const err = error as Record<string, unknown>;
+			// Try errorCode first (Adyen standard)
+			if (typeof err.errorCode === "string" && err.errorCode in adyenErrorMessages) {
+				code = err.errorCode;
+			}
+			// Try message property as fallback
+			if (!code && typeof err.message === "string" && err.message.length > 0) {
+				return err.message;
+			}
+		}
+
+		if (!code || typeof code !== "string") {
+			return "An unexpected payment error occurred. Please try again.";
+	}
+
+		return adyenErrorMessages[code] || `Payment error: ${code}. Please try again.`;
+	} catch {
+		// Promise rejection catch-all: never throw from error handler
+		return "An unexpected payment error occurred. Please try again.";
+	}
 };
