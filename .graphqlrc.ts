@@ -51,7 +51,10 @@ const config: CodegenConfig = {
 	schema: schemaUrl,
 	fetch: cachedFetch,
 	// Storefront GraphQL queries - add new queries here
-	documents: "src/graphql/**/*.graphql",
+	documents: [
+		"src/graphql/**/*.graphql",
+		"src/checkout/graphql/**/*.graphql",
+	],
 	generates: {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
