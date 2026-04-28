@@ -1,3 +1,5 @@
+import { getAdyenErrorCode, isAdyenError } from "./types";
+
 export const adyenErrorMessages = {
 	refused: "The transaction was refused.",
 	acquirerError: "The transaction did not go through due to an error that occurred on the acquirer's end.",
@@ -45,4 +47,25 @@ export const adyenErrorMessages = {
 	cvmRequiredRestartPayment: "A PIN or signature is required. Retry the transaction.",
 	"3DsAuthenticationError":
 		"The 3D Secure authentication failed due to an issue at the card network or issuer. Retry the transaction, or retry the transaction with a different payment method.",
+};
+
+/**
+ * Safe error message lookup with fallback for unknown error codes.
+ * Prevents runtime errors from unmapped Adyen SDK error responses.
+ * Handles both string error codes and Adyen error objects.
+ */
+export const getAdyenErrorMessage = (error?: string | null | unknown): string => {
+	let code: string | undefined;
+
+	if (typeof error === "string") {
+		code = error;
+	} else if (isAdyenError(error)) {
+		code = getAdyenErrorCode(error);
+	}
+
+	if (!code || typeof code !== "string") {
+		return "An unexpected payment error occurred. Please try again.";
+	}
+
+	return adyenErrorMessages[code] || `Payment error: ${code}. Please try again.`;
 };

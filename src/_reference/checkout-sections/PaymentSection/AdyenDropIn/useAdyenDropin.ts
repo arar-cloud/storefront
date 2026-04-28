@@ -2,7 +2,8 @@ import type DropinElement from "@adyen/adyen-web/dist/types/components/Dropin";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { camelCase } from "lodash-es";
 import { CircuitBreaker } from "@/lib/circuit-breaker";
-import { apiErrorMessages } from "../errorMessages";
+import { isAdyenError } from "./types";
+import { apiErrorMessages, getAdyenErrorMessage } from "../errorMessages";
 import {
 	type TransactionInitializeMutationVariables,
 	type TransactionProcessMutationVariables,
@@ -91,6 +92,7 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 	const initializationInProgressRef = useRef(false);
 	const initializationPromiseRef = useRef<Promise<void> | null>(null);
 	const adyenCircuitBreakerRef = useRef(createAdyenCircuitBreaker());
+	const cssLoadedRef = useRef(false);
 
 	const anyRequestsInProgress = areAnyRequestsInProgress({ updateState, loadingCheckout, ...rest });
 
@@ -254,6 +256,43 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 			],
 		),
 	);
+
+	// Ensure CSS is loaded before initializing JavaScript
+	useEffect(() => {
+		const checkCSSLoaded = () => {
+			const stylesheets = Array.from(document.styleSheets);
+			return stylesheets.some(
+				(sheet) => sheet.href && sheet.href.includes("adyen")
+			);
+		};
+
+		if (checkCSSLoaded()) {
+			cssLoadedRef.current = true;
+			return;
+		}
+
+		const timeoutId = setTimeout(() => {
+			if (!cssLoadedRef.current) {
+				console.warn(
+					"[AdyenDropIn] CSS not loaded after 2s. Proceeding with JS initialization."
+				);
+				cssLoadedRef.current = true;
+			}
+		}, 2000);
+
+		const checkInterval = setInterval(() => {
+			if (checkCSSLoaded()) {
+				cssLoadedRef.current = true;
+				clearInterval(checkInterval);
+				clearTimeout(timeoutId);
+			}
+		}, 100);
+
+		return () => {
+			clearInterval(checkInterval);
+			clearTimeout(timeoutId);
+		};
+	}, []);
 
 	// handler for when user presses submit in the dropin
 	const onSubmitInitialize: AdyenCheckoutInstanceOnSubmit = useEvent(async (state, component) => {
