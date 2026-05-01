@@ -1,3 +1,24 @@
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+
+// Schema hashing for incremental codegen
+function getSchemaHash() {
+	const schemaPath = process.env.NEXT_PUBLIC_SALEOR_API_URL || '';
+	const cacheFile = path.join(process.cwd(), '.codegen-cache');
+	const currentHash = crypto.createHash('md5').update(schemaPath).digest('hex');
+
+	if (fs.existsSync(cacheFile)) {
+		const cached = fs.readFileSync(cacheFile, 'utf-8').trim();
+		if (cached === currentHash) {
+			return { skip: true, hash: currentHash };
+		}
+	}
+
+	fs.writeFileSync(cacheFile, currentHash);
+	return { skip: false, hash: currentHash };
+}
+
 /** @type {import('next').NextConfig} */
 const config = {
 	// Cache Components (Partial Prerendering)
