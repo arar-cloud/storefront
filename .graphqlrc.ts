@@ -69,7 +69,7 @@ const config: CodegenConfig = {
 				},
 			},
 			presetConfig: {
-				fragmentMasking: false,
+				fragmentMasking: true,
 			},
 		},
 	},
