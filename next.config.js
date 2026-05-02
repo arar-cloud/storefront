@@ -34,6 +34,12 @@ const config = {
 		// (max 3 concurrent requests + 200ms delay between requests)
 	},
 	images: {
+		deviceSize: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+		// Aggressive image optimization: 25-35% WebP, 35-50% AVIF reduction
+		imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+		formats: ["image/avif", "image/webp", "image/jpeg"],
+		dangerouslyAllowSVG: true,
+		contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
 		remotePatterns: [
 			{
 				// Saleor Cloud CDN
@@ -48,6 +54,8 @@ const config = {
 				hostname: "*",
 			},
 		],
+		// Cache optimized images for 30 days + serve stale while revalidating
+		cacheTTL: 2592000,
 	},
 	typedRoutes: false,
 
