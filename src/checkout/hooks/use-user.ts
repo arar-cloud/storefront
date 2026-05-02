@@ -1,9 +1,13 @@
 import { useUserQuery } from "@/checkout/graphql";
+import { useMemo } from "react";
+
+// Module-level cache for request deduplication
+let cachedUserResult: any = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minute cache
 
 export const useUser = () => {
 	const [{ data, fetching: loading, stale }] = useUserQuery();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minute cache
-let cacheTimestamp = 0;
 
 export const useUser = () => {
   const client = useApolloClient();
@@ -15,8 +19,17 @@ export const useUser = () => {
 
   const cachedResult = queryResultCache.get(cacheKey);
 
-	const user = data?.user;
+	// Memoize and deduplicate user data across re-renders
+	const memoizedResult = useMemo(() => {
+		const now = Date.now();
+		if (data?.user && (!cachedUserResult || now - cacheTimestamp > CACHE_TTL_MS)) {
+			cachedUserResult = data.user;
+			cacheTimestamp = now;
+		}
+		return cachedUserResult || data?.user;
+	}, [data?.user]);
 
+	const user = memoizedResult;
 	const authenticated = !!user?.id;
 
 	return { user, loading: loading || stale, authenticated };
