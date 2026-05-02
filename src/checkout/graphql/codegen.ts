@@ -21,10 +21,15 @@ const config: CodegenConfig = {
 	documents: "src/checkout/graphql/**/*.graphql",
 	generates: {
 		"src/checkout/graphql/generated/index.ts": {
-			plugins: ["typescript", "typescript-operations", "typescript-urql"],
+			plugins: ["typescript", "typescript-operations", "typescript-urql", "@graphql-codegen/urql-batching-plugin"],
 			config: {
 				useTypeImports: true,
 				strictScalars: true,
+				// Prevent redundant field selections across checkout steps (payment, shipping, order)
+				dedupQueryDocuments: true,
+				// Request batching for concurrent checkout operations
+				enableCaching: true,
+				validateDocuments: true,
 				enumsAsTypes: true,
 				scalars: {
 					Date: "string",
