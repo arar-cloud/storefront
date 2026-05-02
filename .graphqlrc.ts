@@ -50,7 +50,7 @@ const config: CodegenConfig = {
 				"@graphql-codegen/urql-batching-plugin",
 			],
 			config: {
-				documentMode: "string",
+				documentMode: "documentNodeCompat",
 				useTypeImports: true,
 				strictScalars: true,
 				// Request deduplication: prevents identical queries within 5s window
