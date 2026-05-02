@@ -1,3 +1,26 @@
+const exponentialBackoffRetry = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 100
+ ): Promise<T> => {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      // Only retry on transient errors
+      if (error instanceof Error && (error.message.includes('network') || error.message.includes('timeout'))) {
+        const delayMs = baseDelayMs * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw lastError;
+};
+
 import { useEffect, useRef, useCallback } from "react";
 import { type AnyVariables, type UseMutationResponse } from "urql";
 
