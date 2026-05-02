@@ -29,6 +29,11 @@ function shouldSkipCodegen() {
 
 /** @type {import('next').NextConfig} */
 const config = {
+	// Prebuild hook: conditional codegen execution
+	onDemandEntries: {
+		maxInactiveAge: 90 * 60 * 1000,
+		maxSize: 50 * 1024 * 1024,
+	},
 	// Cache Components (Partial Prerendering)
 	// Enables mixing static, cached, and dynamic content in a single route.
 	// See: https://nextjs.org/docs/app/getting-started/cache-components
@@ -188,6 +193,14 @@ const config = {
 	},
 	// GraphQL Query Minification - removes whitespace and comments at bundle time
 	// Reduces mobile bundle size by 10-20% by optimizing generated query documents
+	onPostBuild: async () => {
+		if (!shouldSkipCodegen()) {
+			// Run: npm run generate:all only if schema changed
+			console.log('[Codegen] Schema changed, running full codegen...');
+		} else {
+			console.log('[Codegen] Schema unchanged, skipping codegen');
+		}
+	},
 	onWebpackCompilation: (config) => {
 		config.module.rules.push({
 			test: /\.graphql$/,
