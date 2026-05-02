@@ -287,6 +287,18 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 		setSubmitInProgress,
 	]);
 
+	const createAdyenCheckoutInstance = useCallback(
+		async (clientKey: string, environment: any) => {
+			const AdyenCheckout = (await import("@adyen/adyen-web")).default;
+			return new AdyenCheckout({
+				clientKey,
+				environment,
+				locale: "en-US",
+			});
+		},
+		[]
+	);
+
 	const onAdditionalDetails: AdyenCheckoutInstanceOnAdditionalDetails = useEvent(async (state, component) => {
 		setAdyenCheckoutSubmitParams({ state, component });
 		if (currentTransactionId) {
