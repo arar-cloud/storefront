@@ -14,25 +14,26 @@
  * ============================================================================= */
 
 .order-summary-content {
-	display: grid;
+	display: block;
+	overflow: hidden;
 	transition:
-		grid-template-rows 300ms ease-in-out,
+		max-height 300ms ease-in-out,
 		opacity 200ms ease-in-out;
+	contain: layout style paint;
 }
 
 .order-summary-content[data-expanded="false"] {
-	grid-template-rows: 0fr;
+	max-height: 0;
 	opacity: 0;
 }
 
 .order-summary-content[data-expanded="true"] {
-	grid-template-rows: 1fr;
+	max-height: 1000px;
 	opacity: 1;
 }
 
 .order-summary-content > .order-summary-inner {
 	overflow: hidden;
-	min-height: 0;
 }
 
 /* Desktop: always visible */
