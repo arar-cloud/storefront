@@ -53,6 +53,10 @@ const config: CodegenConfig = {
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
+				// Request deduplication: prevents identical queries within 5s window
+				dedupQueryDocuments: true,
+				// Enable result caching hints from server (Cache-Control directives in schema)
+				enableCaching: true,
 				scalars: {
 					Date: "string",
 					DateTime: "string",
