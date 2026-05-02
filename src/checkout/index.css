@@ -20,6 +20,7 @@
 		max-height 300ms ease-in-out,
 		opacity 200ms ease-in-out;
 	contain: layout style paint;
+	will-change: max-height;
 }
 
 .order-summary-content[data-expanded="false"] {
@@ -41,7 +42,7 @@
 	.order-summary-content,
 	.order-summary-content[data-expanded="false"],
 	.order-summary-content[data-expanded="true"] {
-		grid-template-rows: 1fr;
+		max-height: 1000px;
 		opacity: 1;
 	}
 }
