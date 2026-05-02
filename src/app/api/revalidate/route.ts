@@ -1,5 +1,5 @@
 import { revalidatePath, revalidateTag } from "next/cache";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { DefaultChannelSlug } from "@/app/config";
 
@@ -211,7 +211,8 @@ export async function POST(request: NextRequest) {
 			case "product":
 				if (slug) {
 					// Tag-based: Invalidates "use cache" function data
-					// Second arg must match the cacheLife() profile used in the cached function
+					// PRODUCT_UPDATED tag enables fine-grained cache invalidation
+					revalidateTag("PRODUCT_UPDATED");
 					revalidateTag(`product:${slug}`, "minutes");
 					revalidatedTags.push(`product:${slug}`);
 
@@ -226,6 +227,7 @@ export async function POST(request: NextRequest) {
 				// Also invalidate the category page where this product appears
 				// This ensures PLP pages show updated pricing/badges after product changes
 				if (categorySlug) {
+					revalidateTag("CATEGORY_UPDATED");
 					revalidateTag(`category:${categorySlug}`, "minutes");
 					revalidatedTags.push(`category:${categorySlug}`);
 
@@ -237,6 +239,7 @@ export async function POST(request: NextRequest) {
 			case "category":
 				if (slug) {
 					// Tag-based (uses cacheLife("minutes"))
+					revalidateTag("CATEGORY_UPDATED");
 					revalidateTag(`category:${slug}`, "minutes");
 					revalidatedTags.push(`category:${slug}`);
 
@@ -249,6 +252,7 @@ export async function POST(request: NextRequest) {
 			case "collection":
 				if (slug) {
 					// Tag-based (uses cacheLife("minutes"))
+					revalidateTag("COLLECTION_UPDATED");
 					revalidateTag(`collection:${slug}`, "minutes");
 					revalidatedTags.push(`collection:${slug}`);
 
