@@ -71,6 +71,26 @@ const config = {
 	async headers() {
 		const isDev = process.env.NODE_ENV === "development";
 		return [
+			{
+				// GraphQL API responses - cache for 60s with revalidation on mutation
+				source: "/api/graphql",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: isDev ? "no-store" : "public, max-age=60, stale-while-revalidate=300",
+					},
+				],
+			},
+			{
+				// Checkout page - cache product metadata for 60s with event-driven invalidation
+				source: "/checkout",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: isDev ? "no-store" : "public, max-age=60, stale-while-revalidate=600",
+					},
+				],
+			},
 			// In development, prevent aggressive caching of dynamic chunks
 			...(isDev
 				? [
