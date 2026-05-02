@@ -47,6 +47,8 @@ const exponentialBackoffRetry = async <T>(
 import { useEffect, useRef, useCallback } from "react";
 import { type AnyVariables, type UseMutationResponse } from "urql";
 
+import { useCallback, useMemo } from "react";
+
 /**
  * Shallow compare two dependency arrays to avoid string serialization overhead.
  * Returns true if arrays have same length and all elements are strictly equal.
@@ -79,6 +81,10 @@ export function useSafeMutationOnce<TData, TVariables extends AnyVariables>(
 	const { skip = false, deps = [], onSuccess, onError } = options;
 	const hasRunRef = useRef(false);
 	const prevDepsRef = useRef<unknown[] | null>(null);
+
+	// Memoize callbacks to prevent unnecessary effect re-execution
+	const memoizedOnSuccess = useCallback(onSuccess || (() => {}), [onSuccess]);
+	const memoizedOnError = useCallback(onError || (() => {}), [onError]);
 
 	useEffect(() => {
 		if (skip) {
