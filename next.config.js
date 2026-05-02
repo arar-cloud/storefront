@@ -11,10 +11,21 @@ function getSchemaHash() {
 
 function shouldSkipCodegen() {
 	const cacheFile = path.join(process.cwd(), '.codegen-cache');
-	if (!fs.existsSync(cacheFile)) return false;
-	const cachedHash = fs.readFileSync(cacheFile, 'utf-8');
 	const newHash = getSchemaHash();
-	return cachedHash === newHash;
+	
+	if (!fs.existsSync(cacheFile)) {
+		fs.writeFileSync(cacheFile, newHash);
+		return false; // First time, must generate
+	}
+	
+	const cachedHash = fs.readFileSync(cacheFile, 'utf-8').trim();
+	const shouldSkip = cachedHash === newHash;
+	
+	if (!shouldSkip) {
+		fs.writeFileSync(cacheFile, newHash);
+	}
+	
+	return shouldSkip; // True = skip codegen, False = run codegen
 }st schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 	if (!schemaUrl) return false;
 	const currentHash = computeSchemaHash(schemaUrl);
