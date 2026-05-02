@@ -33,6 +33,35 @@ const config = {
 		// Note: API rate limiting is handled by RequestQueue in src/lib/graphql.ts
 		// (max 3 concurrent requests + 200ms delay between requests)
 	},
+	// Webpack bundle analysis and code splitting
+	webpack: (config, { dev }) => {
+		// Dynamic imports for checkout module to reduce initial bundle
+		config.optimization.splitChunks.cacheGroups = {
+			...config.optimization.splitChunks.cacheGroups,
+			checkout: {
+				test: /[\\/]src[\\/]checkout[\\/]/,
+				name: "checkout",
+				priority: 10,
+				reuseExistingChunk: true,
+				enforce: true,
+			},
+			graphql: {
+				test: /[\\/]src[\\/]gql[\\/]/,
+				name: "graphql",
+				priority: 9,
+				reuseExistingChunk: true,
+			},
+		};
+
+		// Bundle analyzer in dev mode only (shows chunk breakdown)
+		if (dev && process.env.ANALYZE_BUNDLE === "true") {
+			const BundleAnalyzerPlugin = require("@next/bundle-analyzer");
+			config.plugins.push(new BundleAnalyzerPlugin());
+		}
+
+		return config;
+	},
+
 	images: {
 		deviceSize: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
 		// Aggressive image optimization: 25-35% WebP, 35-50% AVIF reduction
