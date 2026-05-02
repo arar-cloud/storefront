@@ -1,3 +1,15 @@
+/**
+ * Icon barrel file: DEPRECATED - use direct imports instead
+ *
+ * For tree-shaking and reduced bundle size, import icons directly:
+ *   import { CheckIcon } from "./check-icon";
+ * instead of:
+ *   import { CheckIcon } from "./index";
+ *
+ * This file is maintained for backward compatibility only.
+ * New code should use direct imports.
+ */
+
 export { ApplePayIcon } from "./apple-pay-icon";
 export { BuildingIcon } from "./building-icon";
 export { CheckIcon } from "./check-icon";
