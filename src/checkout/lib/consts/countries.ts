@@ -1,8 +1,9 @@
 import { type CountryCode } from "@/checkout/graphql";
 
-let cachedCountries: ReturnType<typeof getCountries> | null = null;
+let cachedCountries: CountryCode[] | null = null;
 
-const getCountries: CountryCode[] = [
+// Lazy-initialized countries constant - defers memory allocation until first access
+const getCountriesList = (): CountryCode[] => [
 	"AF",
 	"AL",
 	"DZ",
@@ -255,11 +256,13 @@ const getCountries: CountryCode[] = [
 	"AX",
 ];
 
-export const countries = () => {
+// Lazy getter for countries - defers allocation until first access
+export const countries = (): CountryCode[] => {
   if (!cachedCountries) {
-    cachedCountries = getCountries();
+    cachedCountries = getCountriesList();
   }
   return cachedCountries;
 };
 
-export const defaultCountry = countries[0];
+// Return first country from lazy-initialized list
+export const defaultCountry = countries()[0];
