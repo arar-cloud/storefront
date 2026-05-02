@@ -1,6 +1,8 @@
 import { type CountryCode } from "@/checkout/graphql";
 
-export const countries: CountryCode[] = [
+let cachedCountries: ReturnType<typeof getCountries> | null = null;
+
+const getCountries: CountryCode[] = [
 	"AF",
 	"AL",
 	"DZ",
@@ -252,5 +254,12 @@ export const countries: CountryCode[] = [
 	"ZW",
 	"AX",
 ];
+
+export const countries = () => {
+  if (!cachedCountries) {
+    cachedCountries = getCountries();
+  }
+  return cachedCountries;
+};
 
 export const defaultCountry = countries[0];
