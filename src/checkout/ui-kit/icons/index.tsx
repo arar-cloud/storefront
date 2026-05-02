@@ -2,7 +2,7 @@
  * Icon barrel file: DEPRECATED - use direct imports instead
  *
  * For tree-shaking and reduced bundle size, import icons directly:
- *   import { CheckIcon } from "./check-icon";
+ *   import type { default as CheckIcon } from "./check-icon";
  * instead of:
  *   import { CheckIcon } from "./index";
  *
