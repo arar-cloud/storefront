@@ -114,7 +114,9 @@ export function handlePaymentResult(
 		case AdyenApiPaymentResponse.ResultCodeEnum.Received:
 		case AdyenApiPaymentResponse.ResultCodeEnum.RedirectShopper:
 		case AdyenApiPaymentResponse.ResultCodeEnum.Refused: {
-			console.error(result);
+			if (process.env.NODE_ENV === 'development') {
+				console.error('Payment refused:', result?.payment?.resultCode);
+			}
 			component.setStatus("error", {
 				message: `${result.payment.resultCode}: ${result.payment.refusalReason as string}`,
 			});
