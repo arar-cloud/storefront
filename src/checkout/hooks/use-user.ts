@@ -1,36 +1,29 @@
-import { useUserQuery } from "@/checkout/graphql";
-import { useMemo } from "react";
+import { useUserQuery, useApolloClient } from "@/checkout/graphql";
+import { useMemo, useEffect } from "react";
 
 // Module-level cache for request deduplication
 let cachedUserResult: any = null;
 let cacheTimestamp = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minute cache
+const CACHE_TTL_MS = 60000; // Cache user data for 60 seconds
+
+const isCacheValid = () => {
+  return cachedUserResult !== null && (Date.now() - cacheTimestamp) < CACHE_TTL_MS;
+};
 
 export const useUser = () => {
-	const [{ data, fetching: loading, stale }] = useUserQuery();
+  const [{ data, fetching: loading, stale }] = useUserQuery();
 
-export const useUser = () => {
-  const client = useApolloClient();
-  const cacheKey = "user-query-cache";
+  // Update cache when data changes
+  useEffect(() => {
+    if (data?.user && !loading) {
+      cachedUserResult = data.user;
+      cacheTimestamp = Date.now();
+    }
+  }, [data?.user, loading]);
 
-  // Check cache validity before fetching
-  const now = Date.now();
-  const shouldUseCache = queryResultCache.has(cacheKey) && (now - cacheTimestamp) < CACHE_TTL_MS;
-
-  const cachedResult = queryResultCache.get(cacheKey);
-
-	// Memoize and deduplicate user data across re-renders
-	const memoizedResult = useMemo(() => {
-		const now = Date.now();
-		if (data?.user && (!cachedUserResult || now - cacheTimestamp > CACHE_TTL_MS)) {
-			cachedUserResult = data.user;
-			cacheTimestamp = now;
-		}
-		return cachedUserResult || data?.user;
-	}, [data?.user]);
-
-	const user = memoizedResult;
-	const authenticated = !!user?.id;
+  // Return cached data if valid to prevent unnecessary re-renders
+  const user = isCacheValid() ? cachedUserResult : data?.user;
+  const authenticated = !!user?.id;
 
 	return { user, loading: loading || stale, authenticated };
 };
