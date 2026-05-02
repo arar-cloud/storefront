@@ -1,5 +1,5 @@
 import { useUserQuery, useApolloClient } from "@/checkout/graphql";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useApolloClient } from "react";
 
 // Module-level cache for request deduplication
 let cachedUserResult: any = null;
