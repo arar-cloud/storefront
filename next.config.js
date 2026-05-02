@@ -191,6 +191,26 @@ const config = {
 		brotli: true,
 		algorithm: "auto", // Server auto-selects best based on Accept-Encoding
 	},
+	// Webpack plugin to minify GraphQL query strings
+	class MinifyGraphQLStringsPlugin {
+		apply(compiler) {
+			compiler.hooks.compilation.tap('MinifyGraphQLStrings', (compilation) => {
+				compilation.hooks.optimizeAssets.tapPromise('MinifyGraphQLStrings', async (assets) => {
+					for (const filename in assets) {
+						if (filename.endsWith('.js')) {
+							let source = assets[filename].source().toString();
+							// Remove unnecessary whitespace in GraphQL strings
+							source = source.replace(/"query\s+\{/g, '"query {');
+							source = source.replace(/}\s+"/g, '} "');
+							source = source.replace(/\n\s+/g, ' ');
+							assets[filename] = { source: () => source };
+						}
+					}
+				});
+			});
+		}
+	}
+
 	// GraphQL Query Minification - removes whitespace and comments at bundle time
 	// Reduces mobile bundle size by 10-20% by optimizing generated query documents
 	onPostBuild: async () => {
@@ -201,18 +221,36 @@ const config = {
 			console.log('[Codegen] Schema unchanged, skipping codegen');
 		}
 	},
-	onWebpackCompilation: (config) => {
-		config.module.rules.push({
-			test: /\.graphql$/,
-			use: [
-				{
-					loader: 'graphql-tag/loader',
-					options: {
-						minify: true,
-					}
-				}
-			]
-		});
+	webpack: (config, { dev, isServer }) => {
+		// Inline and compress GraphQL query strings before bundling
+		if (!isServer) {
+			config.plugins.push(new MinifyGraphQLStringsPlugin());
+		}
+		
+		// Dynamic imports for checkout module to reduce initial bundle
+		config.optimization.splitChunks.cacheGroups = {
+			...config.optimization.splitChunks.cacheGroups,
+			checkout: {
+				test: /[\\/]src[\\/]checkout[\\/]/,
+				name: "checkout",
+				priority: 10,
+				reuseExistingChunk: true,
+				enforce: true,
+			},
+			graphql: {
+				test: /[\\/]src[\\/]gql[\\/]/,
+				name: "graphql",
+				priority: 9,
+				reuseExistingChunk: true,
+			},
+		};
+
+		// Bundle analyzer in dev mode only (shows chunk breakdown)
+		if (dev && process.env.ANALYZE_BUNDLE === "true") {
+			const BundleAnalyzerPlugin = require("@next/bundle-analyzer");
+			config.plugins.push(new BundleAnalyzerPlugin());
+		}
+
 		return config;
 	},
 };
