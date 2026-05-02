@@ -1,21 +1,37 @@
+// Exponential backoff configuration for retry logic
+const DEFAULT_RETRY_CONFIG = {
+  maxRetries: 3,
+  initialDelayMs: 100,
+  maxDelayMs: 5000,
+  backoffMultiplier: 2,
+};
+
 const exponentialBackoffRetry = async <T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelayMs: number = 100
- ): Promise<T> => {
+  config = DEFAULT_RETRY_CONFIG
+): Promise<T> => {
   let lastError: Error | null = null;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+  for (let attempt = 0; attempt < config.maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      // Only retry on transient errors
-      if (error instanceof Error && (error.message.includes('network') || error.message.includes('timeout'))) {
-        const delayMs = baseDelayMs * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      } else {
+      // Only retry on transient errors (network, timeout, 5xx)
+      const isTransient = error instanceof Error && 
+        (error.message.includes('network') || 
+         error.message.includes('timeout') ||
+         error.message.includes('5'));
+      
+      if (!isTransient) {
         throw error;
       }
+      
+      // Calculate delay with exponential backoff, capped at maxDelayMs
+      const delayMs = Math.min(
+        config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt),
+        config.maxDelayMs
+      );
+      await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
   throw lastError;
