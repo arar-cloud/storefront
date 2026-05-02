@@ -1,4 +1,5 @@
-// Direct named exports for tree-shaking
+// Direct named exports for tree-shaking support
+// Do NOT use barrel re-exports (import * from './') as this prevents tree-shaking
 export { ApplePayIcon } from './apple-pay-icon';
 export { BuildingIcon } from './building-icon';
 export { CheckIcon } from './check-icon';
@@ -14,7 +15,7 @@ export { PhotoIcon } from './photo-icon';
 export { RefreshIcon } from './refresh-icon';
 export { RemoveIcon } from './remove-icon';
 export { ShieldCheckIcon } from './shield-check-icon';
-export { SvgContainer } from './svg-container';
 export { TrashIcon } from './trash-icon';
 export { TruckIcon } from './truck-icon';
 export { UserIcon } from './user-icon';
+export { SVGContainer } from './svg-container';
