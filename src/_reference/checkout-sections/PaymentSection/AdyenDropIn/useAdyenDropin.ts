@@ -223,11 +223,17 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 	// handler for when user presses submit in the dropin
 	const onSubmitInitialize: AdyenCheckoutInstanceOnSubmit = useEvent(async (state, component) => {
-		component.setStatus("loading");
-		setAdyenCheckoutSubmitParams({ state, component });
-		validateAllForms(authenticated);
-		setShouldRegisterUser(true);
-		setSubmitInProgress(true);
+		try {
+			component.setStatus("loading");
+			setAdyenCheckoutSubmitParams({ state, component });
+			validateAllForms(authenticated);
+			setShouldRegisterUser(true);
+			setSubmitInProgress(true);
+		} catch (error) {
+			conponent.setStatus("error");
+			const errorMessage = error instanceof Error ? error.message : 'Payment submission error';
+			showCustomErrors([{ message: errorMessage }]);
+		}
 	});
 
 	// when submission is initialized, awaits for all the other requests to finish,
@@ -289,12 +295,21 @@ export const useAdyenDropin = (props: AdyenDropinProps) => {
 
 	const createAdyenCheckoutInstance = useCallback(
 		async (clientKey: string, environment: any) => {
-			const AdyenCheckout = (await import("@adyen/adyen-web")).default;
-			return new AdyenCheckout({
-				clientKey,
-				environment,
-				locale: "en-US",
-			});
+			try {
+				const AdyenCheckout = (await import("@adyen/adyen-web")).default;
+				if (!AdyenCheckout) {
+					throw new Error('Adyen checkout library failed to load');
+				}
+				const instance = new AdyenCheckout({
+					clientKey,
+					environment,
+					locale: "en-US",
+				});
+				return instance;
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : 'Failed to initialize Adyen checkout';
+				throw new Error(errorMessage);
+			}
 		},
 		[]
 	);
