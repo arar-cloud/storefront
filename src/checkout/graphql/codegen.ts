@@ -35,9 +35,15 @@ const config: CodegenConfig = {
 					Date: "string",
 					DateTime: "string",
 					Day: "number",
-					Decimal: "number",
+					Decimal: {
+					input: 'string | number',
+					output: 'number',
+				},
 					GenericScalar: "unknown",
-					JSON: "any",
+					JSON: {
+					input: 'Record<string, any>',
+					output: 'Record<string, any>',
+				},
 					JSONString: "string",
 					Metadata: "Record<string, string>",
 					Hour: "number",
