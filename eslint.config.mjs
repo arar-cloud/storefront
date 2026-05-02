@@ -21,8 +21,10 @@ const config = [
 			"performance/no-missing-dynamic-imports": "warn",
 			// Flag large imports that should be tree-shaken
 			"performance/no-large-barrel-imports": "warn",
-			// Warn on N+1 query patterns (multiple sequential GraphQL calls)
-			"performance/no-n-plus-one-queries": "warn",
+			// Enforce N+1 prevention: flag multiple sequential GraphQL calls
+			"performance/no-n-plus-one-queries": "error",
+			// Flag query documents that over-fetch fields (not in base eslint-plugin-performance)
+			// but enforced via validateDocuments in .graphqlrc.ts code generation
 		},
 	},
 ];
