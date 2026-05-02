@@ -1,5 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { type AnyVariables, type UseMutationResponse } from "urql";
+
+/**
+ * Shallow compare two dependency arrays to avoid string serialization overhead.
+ * Returns true if arrays have same length and all elements are strictly equal.
+ */
+function areDepsEqual(prevDeps: unknown[], nextDeps: unknown[]): boolean {
+	if (prevDeps.length !== nextDeps.length) return false;
+	for (let i = 0; i < prevDeps.length; i++) {
+		if (prevDeps[i] !== nextDeps[i]) return false;
+	}
+	return true;
+}
 
 /**
  * Run a mutation exactly once when conditions are met.
@@ -20,29 +32,36 @@ export function useSafeMutationOnce<TData, TVariables extends AnyVariables>(
 ) {
 	const { skip = false, deps = [], onSuccess, onError } = options;
 	const hasRunRef = useRef(false);
+	const prevDepsRef = useRef<unknown[] | null>(null);
 
-	// Reset when deps change
-	const depsKey = JSON.stringify(deps);
 	useEffect(() => {
-		hasRunRef.current = false;
-	}, [depsKey]);
+		if (skip) {
+			return;
+		}
 
-	// Run mutation once
-	useEffect(() => {
-		if (skip || hasRunRef.current) return;
+		const depsChanged = prevDepsRef.current === null || !areDepsEqual(prevDepsRef.current, deps);
+		prevDepsRef.current = deps;
+
+		if (depsChanged) {
+			hasRunRef.current = false;
+		}
+
+		if (hasRunRef.current) {
+			return;
+		}
+
 		hasRunRef.current = true;
-
 		mutation(variables)
 			.then((result) => {
+				if (result.data) {
+					onSuccess?.(result.data);
+				}
 				if (result.error) {
 					onError?.(result.error);
-				} else if (result.data) {
-					onSuccess?.(result.data);
 				}
 			})
 			.catch((error) => {
-				onError?.(error instanceof Error ? error : new Error(String(error)));
+				onError?.(error as Error);
 			});
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [skip, depsKey]);
+	}, deps);
 }
