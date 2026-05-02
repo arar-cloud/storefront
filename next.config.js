@@ -4,11 +4,9 @@ import path from 'path';
 
 // Schema hashing for incremental codegen
 function getSchemaHash() {
-	const schemaPath = process.env.NEXT_PUBLIC_SALEOR_API_URL || '';
-	const cacheFile = path.join(process.cwd(), '.codegen-cache');
-	const currentHash = crypto.createHash('md5').update(schemaPath + (process.env.NEXT_PUBLIC_SALEOR_API_URL || '')).digest('hex');
-	fs.writeFileSync(cacheFile, currentHash);
-	return currentHash;
+	const schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL || '';
+	const stableHash = crypto.createHash('md5').update(schemaUrl).digest('hex');
+	return stableHash;
 }
 
 function shouldSkipCodegen() {
