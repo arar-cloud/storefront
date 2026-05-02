@@ -6,7 +6,15 @@ import path from 'path';
 function getSchemaHash() {
 	const schemaPath = process.env.NEXT_PUBLIC_SALEOR_API_URL || '';
 	const cacheFile = path.join(process.cwd(), '.codegen-cache');
-	const currentHash = crypto.createHash('md5').update(schemaPath).digest('hex');
+	const currentHash = crypto.createHash('md5').update(schemaPath + (process.env.NEXT_PUBLIC_SALEOR_API_URL || '')).digest('hex');
+}
+
+function shouldSkipCodegen() {
+	const schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+	if (!schemaUrl) return false;
+	const currentHash = computeSchemaHash(schemaUrl);
+	const previousHash = getSchemaHash();
+	return currentHash === previousHash;
 
 	if (fs.existsSync(cacheFile)) {
 		const cached = fs.readFileSync(cacheFile, 'utf-8').trim();
