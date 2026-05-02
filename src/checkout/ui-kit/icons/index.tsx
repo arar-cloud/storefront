@@ -1,41 +1,20 @@
-/**
- * Icon barrel file: DEPRECATED - use direct imports instead
- *
- * For tree-shaking and reduced bundle size, import icons directly:
- *   import type { default as CheckIcon } from "./check-icon";
- * instead of:
- *   import { CheckIcon } from "./index";
- *
- * This file is maintained for backward compatibility only.
- * New code should use direct imports.
- */
-
-// Direct imports only - consumers should import directly
-// This enables better tree-shaking and reduces bundle size
-
-// For backward compatibility, export lazy-loadable icon map
-import { lazy } from "react";
-
-const iconMap = {
-  ApplePayIcon: lazy(() => import("./apple-pay-icon").then(m => ({ default: m.ApplePayIcon }))),
-  BuildingIcon: lazy(() => import("./building-icon").then(m => ({ default: m.BuildingIcon }))),
-  CheckIcon: lazy(() => import("./check-icon").then(m => ({ default: m.CheckIcon }))),
-  ChevronDownIcon: lazy(() => import("./chevron-down-icon").then(m => ({ default: m.ChevronDownIcon }))),
-  EyeHiddenIcon: lazy(() => import("./eye-hidden-icon").then(m => ({ default: m.EyeHiddenIcon }))),
-  EyeIcon: lazy(() => import("./eye-icon").then(m => ({ default: m.EyeIcon }))),
-  GooglePayIcon: lazy(() => import("./google-pay-icon").then(m => ({ default: m.GooglePayIcon }))),
-  LockIcon: lazy(() => import("./lock-icon").then(m => ({ default: m.LockIcon }))),
-  MailIcon: lazy(() => import("./mail-icon").then(m => ({ default: m.MailIcon }))),
-  MapPinIcon: lazy(() => import("./map-pin-icon").then(m => ({ default: m.MapPinIcon }))),
-  PhoneIcon: lazy(() => import("./phone-icon").then(m => ({ default: m.PhoneIcon }))),
-  PhotoIcon: lazy(() => import("./photo-icon").then(m => ({ default: m.PhotoIcon }))),
-  RefreshIcon: lazy(() => import("./refresh-icon").then(m => ({ default: m.RefreshIcon }))),
-  RemoveIcon: lazy(() => import("./remove-icon").then(m => ({ default: m.RemoveIcon }))),
-  ShieldCheckIcon: lazy(() => import("./shield-check-icon").then(m => ({ default: m.ShieldCheckIcon }))),
-  TrashIcon: lazy(() => import("./trash-icon").then(m => ({ default: m.TrashIcon }))),
-  TruckIcon: lazy(() => import("./truck-icon").then(m => ({ default: m.TruckIcon }))),
-  UserIcon: lazy(() => import("./user-icon").then(m => ({ default: m.UserIcon }))),
-} as const;
-
-export type IconName = keyof typeof iconMap;
-export { iconMap };
+// Direct named exports for tree-shaking
+export { ApplePayIcon } from './apple-pay-icon';
+export { BuildingIcon } from './building-icon';
+export { CheckIcon } from './check-icon';
+export { ChevronDownIcon } from './chevron-down-icon';
+export { EyeHiddenIcon } from './eye-hidden-icon';
+export { EyeIcon } from './eye-icon';
+export { GooglePayIcon } from './google-pay-icon';
+export { LockIcon } from './lock-icon';
+export { MailIcon } from './mail-icon';
+export { MapPinIcon } from './map-pin-icon';
+export { PhoneIcon } from './phone-icon';
+export { PhotoIcon } from './photo-icon';
+export { RefreshIcon } from './refresh-icon';
+export { RemoveIcon } from './remove-icon';
+export { ShieldCheckIcon } from './shield-check-icon';
+export { SvgContainer } from './svg-container';
+export { TrashIcon } from './trash-icon';
+export { TruckIcon } from './truck-icon';
+export { UserIcon } from './user-icon';
