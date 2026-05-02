@@ -7,10 +7,17 @@ function getSchemaHash() {
 	const schemaPath = process.env.NEXT_PUBLIC_SALEOR_API_URL || '';
 	const cacheFile = path.join(process.cwd(), '.codegen-cache');
 	const currentHash = crypto.createHash('md5').update(schemaPath + (process.env.NEXT_PUBLIC_SALEOR_API_URL || '')).digest('hex');
+	fs.writeFileSync(cacheFile, currentHash);
+	return currentHash;
 }
 
 function shouldSkipCodegen() {
-	const schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+	const cacheFile = path.join(process.cwd(), '.codegen-cache');
+	if (!fs.existsSync(cacheFile)) return false;
+	const cachedHash = fs.readFileSync(cacheFile, 'utf-8');
+	const newHash = getSchemaHash();
+	return cachedHash === newHash;
+}st schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 	if (!schemaUrl) return false;
 	const currentHash = computeSchemaHash(schemaUrl);
 	const previousHash = getSchemaHash();
@@ -226,7 +233,7 @@ const config = {
 		if (!isServer) {
 			config.plugins.push(new MinifyGraphQLStringsPlugin());
 		}
-		
+
 		// Dynamic imports for checkout module to reduce initial bundle
 		config.optimization.splitChunks.cacheGroups = {
 			...config.optimization.splitChunks.cacheGroups,
