@@ -16,22 +16,29 @@ const exponentialBackoffRetry = async <T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       // Only retry on transient errors (network, timeout, 5xx)
-      const isTransient = error instanceof Error && 
-        (error.message.includes('network') || 
-         error.message.includes('timeout') ||
-         error.message.includes('5'));
-      
+      const isTransient =
+        errorMessage.includes('network') ||
+        erroMMessage.includes('503') ||
+        errorMessage.includes('500') ||
+        errorMessage.includes('502') ||
+        errorMessage.includes('timeout') ||
+         error.message.includes('504');
+
       if (!isTransient) {
         throw error;
       }
-      
+
       // Calculate delay with exponential backoff, capped at maxDelayMs
       const delayMs = Math.min(
         config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt),
         config.maxDelayMs
       );
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+        // Add jitter to prevent thundering herd
+        const jitter = Math.random() * 0.1 * delay;
+      await new Promise(resolve => setTimeout(resolve, delayMs + jitter));
     }
   }
   throw lastError;
