@@ -21,16 +21,20 @@
 		opacity 200ms ease-in-out;
 	contain: layout style paint;
 	will-change: max-height;
+	backface-visibility: hidden;
+	transform: translateZ(0);
 }
 
 .order-summary-content[data-expanded="false"] {
 	max-height: 0;
 	opacity: 0;
+	pointer-events: none;
 }
 
 .order-summary-content[data-expanded="true"] {
 	max-height: 1000px;
 	opacity: 1;
+	pointer-events: auto;
 }
 
 .order-summary-content > .order-summary-inner {
