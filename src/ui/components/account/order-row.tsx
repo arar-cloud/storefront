@@ -1,3 +1,8 @@
+interface OrderRowProps {
+	order: Order;
+	index?: number;
+}
+
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { type OrderDetailsFragment } from "@/gql/graphql";

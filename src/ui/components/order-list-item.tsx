@@ -8,7 +8,12 @@ type Props = {
 	order: OrderDetailsFragment;
 };
 
-export const OrderListItem = ({ order }: Props) => {
+interface OrderListItemProps extends Props {
+	index?: number;
+}
+
+export const OrderListItem = ({ order, index = 0 }: OrderListItemProps) => {
+	const shouldPriorityLoad = index < 3;
 	return (
 		<li className="bg-white">
 			<div className="flex flex-col gap-2 border bg-neutral-200/20 px-6 py-4 md:grid md:grid-cols-4 md:gap-8">
