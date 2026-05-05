@@ -25,6 +25,6 @@ export const useCheckout = ({ pause = false } = {}) => {
 			refetch,
 			hasCheckoutId: !!id,
 		}),
-		[data?.checkout, fetching, refetch, stale, id],
+		[data?.checkout, fetching, stale, id],
 	);
 };

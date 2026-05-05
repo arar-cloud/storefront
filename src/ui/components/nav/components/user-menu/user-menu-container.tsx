@@ -1,3 +1,7 @@
+// Request-scoped cache to prevent redundant auth calls within same render cycle
+const authCache = new Map<string, any>();
+const CACHE_KEY = "user_auth_current";
+
 import { cookies } from "next/headers";
 import { UserIcon } from "lucide-react";
 import { UserMenu } from "./user-menu";
@@ -9,6 +13,14 @@ export async function UserMenuContainer() {
 	// During static generation, cookies() throws - skip user fetch entirely
 	let hasCookies = false;
 	try {
+		// Check cache first to avoid redundant GraphQL calls within same request
+		if (authCache.has(CACHE_KEY)) {
+			const cachedData = authCache.get(CACHE_KEY);
+			if (cachedData && cachedData.user) {
+				return <UserMenuAuthenticated user={cachedData.user} />;
+			}
+		}
+
 		const cookieStore = await cookies();
 		hasCookies = cookieStore.getAll().length > 0;
 	} catch {

@@ -20,6 +20,17 @@ export const StripeComponent = ({ config }: { config: StripeConfig }) => {
 	const [loadingError, setLoadingError] = useState<string | null>(null);
 
 	useEffect(() => {
+		// Add preconnect and dns-prefetch hints for Stripe domain to improve script loading
+		const preconnect = document.createElement('link');
+		preconnect.rel = 'preconnect';
+		preconnect.href = 'https://js.stripe.com';
+		document.head.appendChild(preconnect);
+
+		const dnsPrefetch = document.createElement('link');
+		dnsPrefetch.rel = 'dns-prefetch';
+		dnsPrefetch.href = 'https://js.stripe.com';
+		document.head.appendChild(dnsPrefetch);
+
 		if (!publishableKey) {
 			return;
 		}
@@ -43,6 +54,8 @@ export const StripeComponent = ({ config }: { config: StripeConfig }) => {
 
 		return () => {
 			isMounted = false;
+			if (preconnect.parentNode) preconnect.parentNode.removeChild(preconnect);
+			if (dnsPrefetch.parentNode) dnsPrefetch.parentNode.removeChild(dnsPrefetch);
 		};
 	}, [publishableKey]);
 

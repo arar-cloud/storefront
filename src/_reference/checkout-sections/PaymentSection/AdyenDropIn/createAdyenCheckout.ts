@@ -56,10 +56,16 @@ export function createAdyenCheckoutInstance(
 			sessionData: adyenSessionResponse.session.sessionData,
 		},
 		onPaymentCompleted: (result: any, component: any) => {
-			console.info(result, component);
+			// Log only result code for debugging, never log full response to prevent PCI data exposure
+			if (process.env.NODE_ENV === 'development') {
+				console.info('Payment completed with result code:', result?.resultCode);
+			}
 		},
 		onError: (error: any, component: any) => {
-			console.error(error.name, error.message, error.stack, component);
+			// Log only error message, not full stack, to prevent sensitive data exposure
+			if (process.env.NODE_ENV === 'development') {
+				console.error('Payment error:', error?.message);
+			}
 		},
 		onSubmit,
 		onAdditionalDetails,
@@ -108,7 +114,9 @@ export function handlePaymentResult(
 		case AdyenApiPaymentResponse.ResultCodeEnum.Received:
 		case AdyenApiPaymentResponse.ResultCodeEnum.RedirectShopper:
 		case AdyenApiPaymentResponse.ResultCodeEnum.Refused: {
-			console.error(result);
+			if (process.env.NODE_ENV === 'development') {
+				console.error('Payment refused:', result?.payment?.resultCode);
+			}
 			component.setStatus("error", {
 				message: `${result.payment.resultCode}: ${result.payment.refusalReason as string}`,
 			});

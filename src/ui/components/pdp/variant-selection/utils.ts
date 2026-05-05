@@ -324,6 +324,51 @@ export const getAvailableOptionsForAttribute = getOptionsForAttribute;
  * Check if any attribute group has no available options given current selections.
  * Returns info about "dead end" situations.
  */
+/**
+ * Pre-builds a hashmap from attribute combinations to variant IDs for O(1) lookup.
+ * Key format: "attr1:value1|attr2:value2" (sorted for consistency)
+ */
+export function buildVariantLookupMap(
+	variants: SaleorVariant[]
+): Record<string, string> {
+	const lookupMap: Record<string, string> = {};
+
+	for (const variant of variants) {
+		if (!variant.attributes || variant.attributes.length === 0) {
+			continue;
+		}
+
+		// Build key from sorted attribute pairs
+		const attrPairs = variant.attributes
+			.map((attr) => {
+				const value = attr.value?.slug || String(attr.value);
+				return `${attr.attribute.slug}:${value}`;
+			})
+			.sort();
+
+		const key = attrPairs.join("|");
+		lookupMap[key] = variant.id;
+	}
+
+	return lookupMap;
+}
+
+/**
+ * Performs O(1) variant lookup using pre-built hashmap.
+ * Converts selection object to key and looks up variant ID.
+ */
+export function lookupVariantByAttributes(
+	selections: Record<string, string>,
+	lookupMap: Record<string, string>
+): string | undefined {
+	const attrPairs = Object.entries(selections)
+		.map(([slug, value]) => `${slug}:${value}`)
+		.sort();
+
+	const key = attrPairs.join("|");
+	return lookupMap[key];
+}
+
 export function getUnavailableAttributeInfo(
 	variants: SaleorVariant[],
 	attributeGroups: AttributeGroup[],

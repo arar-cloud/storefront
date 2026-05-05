@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useMemo } from "react";
 import { LinkWithChannel } from "../atoms/link-with-channel";
 import { formatDate, formatMoney, getHrefForVariant } from "@/lib/utils";
 import { type OrderDetailsFragment } from "@/gql/graphql";
@@ -8,7 +9,23 @@ type Props = {
 	order: OrderDetailsFragment;
 };
 
-export const OrderListItem = ({ order }: Props) => {
+interface OrderListItemProps extends Props {
+	index?: number;
+}
+
+export const OrderListItem = ({ order, index = 0 }: OrderListItemProps) => {
+	const shouldPriorityLoad = index < 3;
+
+	// Memoize formatted prices to avoid redundant formatMoney calls
+	const formattedTotalGross = useMemo(
+		() => order.total?.gross ? formatMoney(order.total.gross) : "—",
+		[order.total?.gross]
+	);
+
+	const formattedAmountCaptured = useMemo(
+		() => order.userEmail ? formatMoney(order.total?.gross) : "—",
+		[order.userEmail, order.total?.gross]
+	);
 	return (
 		<li className="bg-white">
 			<div className="flex flex-col gap-2 border bg-neutral-200/20 px-6 py-4 md:grid md:grid-cols-4 md:gap-8">

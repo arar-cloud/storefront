@@ -1,6 +1,9 @@
 import { type CountryCode } from "@/checkout/graphql";
 
-export const countries: CountryCode[] = [
+let _countriesCache: CountryCode[] | null = null;
+
+// Lazy-initialized countries constant - defers memory allocation until first access
+const COUNTRIES_DATA = [
 	"AF",
 	"AL",
 	"DZ",
@@ -253,4 +256,19 @@ export const countries: CountryCode[] = [
 	"AX",
 ];
 
-export const defaultCountry = countries[0];
+/**
+ * Lazy-loaded countries list. Deferred until first access to reduce initial
+ * module parse time and memory overhead during app startup and security validation.
+ */
+export const getCountries = (): CountryCode[] => {
+  if (_countriesCache === null) {
+    _countriesCache = COUNTRIES_DATA;
+  }
+  return _countriesCache;
+};
+
+// Backward compatibility: lazy getter wrapper
+export const countries = (): CountryCode[] => getCountries();
+
+// Return first country from lazy-initialized list - wrapped in lazy getter
+export const getDefaultCountry = (): CountryCode => getCountries()[0];

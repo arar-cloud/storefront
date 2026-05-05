@@ -6,7 +6,7 @@ import {
 	type AdyenDropinProps,
 	useAdyenDropin,
 } from "@/checkout/sections/PaymentSection/AdyenDropIn/useAdyenDropin";
-import "@adyen/adyen-web/dist/adyen.css";
+// CSS loaded dynamically in useEffect to prevent render-blocking
 import { type AdyenGatewayInitializePayload } from "@/checkout/sections/PaymentSection/AdyenDropIn/types";
 
 type AdyenCheckoutInstance = Awaited<ReturnType<typeof AdyenCheckout>>;
@@ -35,6 +35,19 @@ export const AdyenDropIn: FC<AdyenDropinProps> = ({ config }) => {
 		},
 		[onAdditionalDetails, onSubmit],
 	);
+
+	utuseEffect(() => {
+		// Lazy-load Adyen CSS to prevent render-blocking
+		const link = document.createElement('link');
+		link.rel = 'preload';
+		link.as = 'style';
+		link.href = require.resolve('@adyen/adyen-web/dist/adyen.css');
+		document.head.appendChild(link);
+		
+		import('@adyen/adyen-web/dist/adyen.css').catch(err => {
+			console.warn('Failed to load Adyen CSS:', err);
+		});
+	}, []);
 
 	useEffect(() => {
 		if (dropinContainerElRef.current && !dropinComponentRef.current) {

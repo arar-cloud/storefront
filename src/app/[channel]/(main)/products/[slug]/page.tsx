@@ -1,6 +1,12 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { type Metadata } from "next";
+
+// ============================================================================
+// ISR Configuration: Cache high-traffic product pages
+// ============================================================================
+export const revalidate = 1800; // ISR: cache product pages for 30 minutes
+export const dynamicParams = true; // Enable dynamic param generation on-demand
 import { cacheLife, cacheTag } from "next/cache";
 import { ErrorBoundary } from "react-error-boundary";
 import edjsHTML from "editorjs-html";
@@ -26,6 +32,7 @@ async function getProductData(slug: string, channel: string) {
 	"use cache";
 	cacheLife("minutes");
 	cacheTag(`product:${slug}`);
+	cacheTag(`product-inventory:${slug}`); // Tag inventory for targeted revalidation
 
 	const result = await executePublicGraphQL(ProductDetailsDocument, {
 		variables: {
