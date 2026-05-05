@@ -270,5 +270,5 @@ export const getCountries = (): CountryCode[] => {
 // Backward compatibility: lazy getter wrapper
 export const countries = (): CountryCode[] => getCountries();
 
-// Return first country from lazy-initialized list
-export const defaultCountry = getCountries()[0];
+// Return first country from lazy-initialized list - wrapped in lazy getter
+export const getDefaultCountry = (): CountryCode => getCountries()[0];
