@@ -1,4 +1,5 @@
 /**
+
  * GraphQL Code Generator Configuration
  *
  * This config generates TypeScript types from GraphQL queries/mutations.
@@ -15,6 +16,27 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Security Requirements for GraphQL Queries
+ * All GraphQL queries in `src/graphql/` MUST:
+ * 1. Use typed variables (never string interpolation): use $variableName instead of #{variable}
+ * 2. Validate all user-supplied input before passing to GraphQL operations
+ * 3. Sanitize string inputs to prevent injection attacks
+ * 4. Use allowlists for enum and ID inputs
+ * 5. Enforce maximum lengths on string variables
+ * 6. Never trust user input for filters, sorts, or other operators
+ *
+ * Example secure pattern:
+ *   // ✓ CORRECT: Typed variable with validation
+ *   const sanitizedEmail = input.email.trim().toLowerCase();
+ *   if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(sanitizedEmail)) {
+ *     throw new Error("Invalid email format");
+ *   }
+ *   const result = await client.query(MyQuery, { email: sanitizedEmail });
+ *
+ *   // ✗ WRONG: String interpolation or unsanitized input
+ *   const query = \`query { user(email: \"${input.email}\") { id } }\`;
+ *   const result = await client.query(query);
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
