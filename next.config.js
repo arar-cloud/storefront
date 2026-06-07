@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const config = {
+  images: {
+    formats: ["image/webp", "image/avif"],
+    deviceSizes: [320, 420, 520, 620, 720, 820, 920, 1020, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    unoptimized: false,
+    minimumCacheTTL: 60,
+  },
 	// Cache Components (Partial Prerendering)
 	// Enables mixing static, cached, and dynamic content in a single route.
 	// See: https://nextjs.org/docs/app/getting-started/cache-components
