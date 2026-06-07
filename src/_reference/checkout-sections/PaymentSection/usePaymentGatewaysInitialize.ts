@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { type CountryCode, usePaymentGatewaysInitializeMutation } from "@/checkout/graphql";
 import { useCheckout } from "@/checkout/hooks/useCheckout";
 import { useSubmit } from "@/checkout/hooks/useSubmit";
@@ -8,10 +8,7 @@ import { getFilteredPaymentGateways } from "@/checkout/sections/PaymentSection/u
 
 export const usePaymentGatewaysInitialize = () => {
 	const {
-		checkout: { billingAddress },
-	} = useCheckout();
-	const {
-		checkout: { id: checkoutId, availablePaymentGateways },
+		checkout: { billingAddress, id: checkoutId, availablePaymentGateways },
 	} = useCheckout();
 
 	const billingCountry = billingAddress?.country.code as MightNotExist<CountryCode>;
@@ -19,7 +16,22 @@ export const usePaymentGatewaysInitialize = () => {
 	const [gatewayConfigs, setGatewayConfigs] = useState<ParsedPaymentGateways>([]);
 	const previousBillingCountry = useRef(billingCountry);
 
+	const filteredGateways = useMemo(
+		() => getFilteredPaymentGateways(availablePaymentGateways),
+		[availablePaymentGateways]
+	);
+
+	const debounceTimerRef = useRef<NodeJS.Timeout>();
 	const [{ fetching }, paymentGatewaysInitialize] = usePaymentGatewaysInitializeMutation();
+
+	const debouncedOnSubmit = useCallback(() => {
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+		}
+		debounceTimerRef.current = setTimeout(() => {
+			void onSubmit();
+		}, 300);
+	}, []);
 
 	const onSubmit = useSubmit<{}, typeof paymentGatewaysInitialize>(
 		useMemo(
@@ -30,7 +42,7 @@ export const usePaymentGatewaysInitialize = () => {
 				onSubmit: paymentGatewaysInitialize,
 				parse: () => ({
 					checkoutId,
-					paymentGateways: getFilteredPaymentGateways(availablePaymentGateways).map(({ config, id }) => ({
+					paymentGateways: filteredGateways.map(({ config, id }) => ({
 						id,
 						data: config,
 					})),
@@ -59,9 +71,9 @@ export const usePaymentGatewaysInitialize = () => {
 	useEffect(() => {
 		if (billingCountry !== previousBillingCountry.current) {
 			previousBillingCountry.current = billingCountry;
-			void onSubmit();
+			debouncedOnSubmit();
 		}
-	}, [billingCountry, onSubmit]);
+	}, [billingCountry, debouncedOnSubmit]);
 
 	return {
 		fetching,

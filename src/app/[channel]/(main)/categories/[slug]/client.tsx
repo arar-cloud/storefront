@@ -1,5 +1,7 @@
 "use client";
 
+import { memo, useMemo, useCallback } from "react";
+
 import { Suspense } from "react";
 import { FilterBar, ProductGrid, useProductFilters, type ProductCardData } from "@/ui/components/plp";
 import { Pagination } from "@/ui/components/pagination";
@@ -15,16 +17,16 @@ interface CategoryPageClientProps {
 	totalCount?: number;
 }
 
-function PaginationSkeleton() {
+const PaginationSkeleton = memo(() => {
 	return (
 		<nav className="flex items-center justify-center gap-x-4 border-neutral-200 px-4 pt-12">
 			<span className="h-10 w-24 animate-pulse rounded bg-neutral-200" />
 			<span className="h-10 w-24 animate-pulse rounded bg-neutral-200" />
 		</nav>
 	);
-}
+});
 
-export function CategoryPageClient({ products, pageInfo }: CategoryPageClientProps) {
+const CategoryPageClientInner = memo(function CategoryPageClient({ products, pageInfo }: CategoryPageClientProps) {
 	const {
 		filteredProducts,
 		colorOptions,
@@ -84,4 +86,8 @@ export function CategoryPageClient({ products, pageInfo }: CategoryPageClientPro
 			</div>
 		</>
 	);
+});
+
+export function CategoryPageClient(props: CategoryPageClientProps) {
+	return <CategoryPageClientInner {...props} />;
 }

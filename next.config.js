@@ -1,5 +1,65 @@
 /** @type {import('next').NextConfig} */
 const config = {
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Aggressive optimization: serve only modern formats on capable browsers
+    unoptimized: false,
+    quality: 75,
+  },
+  webpack: (config, { isServer }) => {
+    // Aggressive code splitting for faster initial load and better caching
+    if (!isServer) {
+      config.optimization.splitChunks.cacheGroups = {
+        // Extract Next.js internals to separate chunk
+        nextInternals: {
+          test: /[\\/]node_modules[\\/]next[\\/]/,
+          name: 'next-internals',
+          priority: 40,
+          reuseExistingChunk: true,
+        },
+        // Extract React and React DOM
+        react: {
+          test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+          name: 'react-vendors',
+          priority: 30,
+          reuseExistingChunk: true,
+        },
+        // Extract all other vendor code
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          priority: 20,
+          reuseExistingChunk: true,
+        },
+        // Extract common code shared between chunks
+        common: {
+          minChunks: 2,
+          priority: 10,
+          reuseExistingChunk: true,
+          name: 'common',
+        },
+        ...config.optimization.splitChunks.cacheGroups,
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          priority: 10,
+          reuseExistingChunk: true,
+        },
+        common: {
+          minChunks: 2,
+          priority: 5,
+          reuseExistingChunk: true,
+        },
+      };
+    }
+    return config;
+  },
+
 	// Cache Components (Partial Prerendering)
 	// Enables mixing static, cached, and dynamic content in a single route.
 	// See: https://nextjs.org/docs/app/getting-started/cache-components
@@ -51,6 +111,28 @@ const config = {
 						},
 					]
 				: []),
+			{
+				// Product and category pages - ISR with SWR caching
+				// Revalidate every 1 hour (3600s) on-demand; serve stale content while revalidating
+				source: "/products/:path*",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "public, max-age=3600, s-maxage=3600, stale-while-revalidate=604800",
+					},
+				],
+			},
+			{
+				// Category pages - ISR with SWR caching
+				// Revalidate every 1 hour (3600s) on-demand; serve stale content while revalidating
+				source: "/categories/:path*",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "public, max-age=3600, s-maxage=3600, stale-while-revalidate=604800",
+					},
+				],
+			},
 			{
 				// Static assets - cache for 1 year (immutable with hash in filename)
 				source: "/_next/static/:path*",

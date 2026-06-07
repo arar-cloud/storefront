@@ -16,7 +16,17 @@ RUN pnpm i --frozen-lockfile --prefer-offline
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+# Copy only package files for dependency layer caching
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies in isolated layer to leverage Docker cache
+RUN pnpm i --frozen-lockfile --prefer-offline
+
+# Copy entire source code after dependencies are cached
 COPY . .
 
 # Next.js collects completely anonymous telemetry data about general usage.
