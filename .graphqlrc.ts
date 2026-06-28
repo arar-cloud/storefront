@@ -18,8 +18,46 @@
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import { URL as URLClass } from "url";
 
 loadEnvConfig(process.cwd());
+
+/**
+ * Validates and sanitizes GraphQL API URL from environment
+ * @param urlString - The URL string to validate
+ * @returns The validated URL string
+ * @throws Error if URL is invalid, uses disallowed protocol, or is malformed
+ */
+function validateGraphQLApiUrl(urlString: string | undefined): string {
+  if (!urlString) {
+    throw new Error("NEXT_PUBLIC_SALEOR_API_URL environment variable is not set");
+  }
+
+  try {
+    const url = new URLClass(urlString);
+    
+    // Only allow https or http protocols
+    if (!url.protocol.match(/^https?:$/)) {
+      throw new Error(`Invalid protocol: ${url.protocol}. Only http and https are allowed.`);
+    }
+    
+    // Validate hostname is not localhost/127.0.0.1 in production
+    if (process.env.NODE_ENV === "production") {
+      const hostname = url.hostname;
+      if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0") {
+        throw new Error("Cannot use localhost/127.0.0.1 GraphQL URL in production");
+      }
+    }
+    
+    // Return normalized URL string
+    return url.toString();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Invalid GraphQL API URL: ${error.message}`);
+    }
+    throw new Error("Invalid GraphQL API URL");
+  }
+}
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
