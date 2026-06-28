@@ -15,7 +15,7 @@ function escapeShellArg(str) {
 const buildEslintCommand = (filenames) => {
 	const files = filenames
 		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => `"${filename}"`)
+		.map((filename) => escapeShellArg(filename))
 		.join(" ");
 
 	return `pnpm eslint --fix ${files}`;
