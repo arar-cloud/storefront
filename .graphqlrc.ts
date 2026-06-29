@@ -50,7 +50,18 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
-// Validate NEXT_PUBLIC_SALEOR_API_URL: reject localhost, internal IPs, and malformed URLs
+/**
+ * Validate NEXT_PUBLIC_SALEOR_API_URL: reject localhost, internal IPs, and malformed URLs
+ *
+ * IMPORTANT: NEXT_PUBLIC_SALEOR_API_URL is a NON-SECRET configuration variable that is
+ * embedded in client-side bundles. It must NEVER contain:
+ * - Localhost addresses (localhost, 127.0.0.1, ::1)
+ * - Internal/private IP ranges (10.*, 192.168.*, 172.16.*, etc.)
+ * - Staging or development endpoints
+ *
+ * This validation prevents accidental exposure of internal/staging API endpoints
+ * in production deployments and client code.
+ */
 if (process.env.NEXT_PUBLIC_SALEOR_API_URL && process.env.GITHUB_ACTION !== "generate-schema-from-file") {
 	try {
 		const urlObj = new URL(process.env.NEXT_PUBLIC_SALEOR_API_URL);
