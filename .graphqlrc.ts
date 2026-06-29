@@ -21,10 +21,57 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+// Validate GraphQL schema URL to prevent SSRF attacks
+function validateGraphQLSchemaUrl(url: string | undefined): string {
+	if (!url) {
+		throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
+	}
+
+	try {
+		const parsedUrl = new URL(url);
+
+		// Enforce HTTPS protocol
+		if (parsedUrl.protocol !== 'https:') {
+			throw new Error('GraphQL schema URL must use HTTPS protocol');
+		}
+
+		// Validate hostname is not a private IP or localhost
+		const hostname = parsedUrl.hostname;
+		if (
+			hostname === 'localhost' ||
+			hostname === '127.0.0.1' ||
+			hostname.startsWith('192.168.') ||
+			hostname.startsWith('10.') ||
+			hostname.startsWith('172.')
+		) {
+			throw new Error('GraphQL schema URL cannot target private IP addresses or localhost');
+		}
+
+		return url;
+	} catch (error) {
+		if (error instanceof TypeError) {
+			throw new Error(`Invalid GraphQL schema URL: ${url}`);
+		}
+		throw error;
+	}
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
+}
+
+// Validate schema URL (skip validation for local schema.graphql file)
+if (schemaUrl && schemaUrl !== "schema.graphql") {
+	try {
+		schemaUrl = validateGraphQLSchemaUrl(schemaUrl);
+	} catch (error) {
+		console.error(
+			error instanceof Error ? error.message : "Invalid GraphQL schema URL",
+		);
+		process.exit(1);
+	}
 }
 
 if (!schemaUrl) {
