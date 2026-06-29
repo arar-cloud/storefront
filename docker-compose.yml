@@ -6,16 +6,20 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        # Environment variables must be provided externally; do not hardcode credentials
+        # SECURITY: Environment variables MUST be provided externally via .env or deployment
+        # NEVER hardcode credentials, API keys, or secrets in this file
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
-      # Bind only to localhost by default to prevent public exposure
-      # Change to 0.0.0.0:3000:3000 only if intentionally exposing this service publicly
+      # SECURITY: Bind to localhost (127.0.0.1) by default to prevent public exposure
+      # Only change to 0.0.0.0:3000:3000 if this service intentionally requires public access
+      # Production deployments should use reverse proxy with authentication (nginx, cloudflare)
       - "127.0.0.1:3000:3000"
     networks:
       - saleor_network
+    # SECURITY: Ensure service only communicates through dedicated network
+    # Prevents unintended inter-service exposure
     # Health check to validate service availability
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
