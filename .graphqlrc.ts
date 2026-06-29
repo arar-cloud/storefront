@@ -49,6 +49,8 @@ const config: CodegenConfig = {
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
+				validationSchema: "zod",
+				scalarValidation: true,
 				scalars: {
 					Date: "string",
 					DateTime: "string",
