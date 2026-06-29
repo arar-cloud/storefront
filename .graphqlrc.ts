@@ -104,7 +104,7 @@ const config: CodegenConfig = {
 					Decimal: "number",
 					GenericScalar: "unknown",
 					JSON: "unknown",
-					JSONString: "string",
+					JSONString: "Record<string, unknown>", // Security: Enforce JSON validation instead of plain string
 					Metadata: "Record<string, string>",
 					Hour: "number",
 					Minute: "number",
