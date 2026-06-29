@@ -16,10 +16,31 @@
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
  */
-import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import * as dotenv from "dotenv";
+import * as path from "path";
+import * as fs from "fs";
 
-loadEnvConfig(process.cwd());
+// Load only safe environment variables, excluding sensitive credentials
+function loadSafeEnvConfig(cwd: string): void {
+	const envPath = path.join(cwd, '.env.local');
+	if (fs.existsSync(envPath)) {
+		const env = dotenv.parse(fs.readFileSync(envPath));
+		// Whitelist safe environment variables for GraphQL code generation
+		const safeKeys = [
+			'NEXT_PUBLIC_SALEOR_API_URL',
+			'NEXT_PUBLIC_STOREFRONT_URL',
+			'NODE_ENV',
+		];
+		safeKeys.forEach((key) => {
+			if (env[key]) {
+				process.env[key] = env[key];
+			}
+		});
+	}
+}
+
+loadSafeEnvConfig(process.cwd());
 
 // Validate GraphQL schema URL to prevent SSRF attacks
 function validateGraphQLSchemaUrl(url: string | undefined): string {
