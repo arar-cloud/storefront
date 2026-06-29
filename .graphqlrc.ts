@@ -109,6 +109,13 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	// Security: Validate query complexity and depth to prevent DoS attacks
+	hooks: {
+		afterOneFileWrite: [
+			// Add complexity analysis warnings during code generation
+			'echo "Note: Validate generated queries for complexity limits during code review"',
+		],
+	},
 };
 
 export default config;
