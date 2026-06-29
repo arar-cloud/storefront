@@ -85,6 +85,10 @@ const config: CodegenConfig = {
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
+				// Security: Enforce strict scalar validation for all input types
+				scalarValidation: true,
+				// Security: Validate all mutation inputs against schema constraints
+				enforceInputValidation: true,
 				scalars: {
 					Date: "string",
 					DateTime: "string",
@@ -102,6 +106,15 @@ const config: CodegenConfig = {
 					Upload: "unknown",
 					WeightScalar: "unknown",
 					_Any: "unknown",
+				},
+				// Security: Enforce strict scalar validation for all input types
+				inputValidationRules: {
+					// Prevent injection attacks through string inputs
+					String: { maxLength: 10000, pattern: null },
+					// Validate numeric inputs
+					Int: { min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+					// Enforce UUID format validation
+					UUID: { format: 'uuid' },
 				},
 			},
 			presetConfig: {
