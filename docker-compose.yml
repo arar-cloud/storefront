@@ -1,4 +1,8 @@
-version: "3"
+version: "3.8"
+
+# Security: All sensitive credentials must be provided via environment variables
+# Never hardcode passwords, API keys, or database credentials in this file
+# Use .env file or deployment secrets management (e.g., Docker Secrets, Kubernetes Secrets)
 
 services:
   saleor-storefront:
@@ -6,16 +10,52 @@ services:
     build:
       dockerfile: Dockerfile
       args:
+        # Security: Only non-sensitive environment variables in build args
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
-      - 3000:3000
+      - "3000:3000"
+    # Security: Use environment file for secrets, not hardcoded values
+    env_file:
+      - .env.local
+    # Security: Set resource limits to prevent resource exhaustion attacks
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    # Security: Use read-only filesystem where possible
+    read_only: true
+    # Security: Use tmpfs for temporary data instead of writable root
+    tmpfs:
+      - /tmp
+      - /run
+    # Security: Run with non-root user (must be configured in Dockerfile)
+    user: "node"
     networks:
       - saleor_network
+    # Security: Add health check to detect compromised containers
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Add more containers below (nginx, postgres, etc.)
+  # Add more containers below (nginx, postgres, redis, etc.)
+  # Security guidelines for additional services:
+  # - Database: Use strong credentials from secrets, enforce minimal user privileges
+  # - Redis: Disable dangerous commands (FLUSHDB, FLUSHALL), require authentication
+  # - Nginx: Enable HTTPS, set security headers, validate input
 
 networks:
   saleor_network:
-    external: false
+    driver: bridge
+    # Security: Isolate network - services should not be externally accessible by default
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
