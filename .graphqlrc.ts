@@ -16,15 +16,79 @@
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
  */
-import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import * as dotenv from "dotenv";
+import * as path from "path";
+import * as fs from "fs";
+import * as url from "url";
 
-loadEnvConfig(process.cwd());
+// Load only safe environment variables, excluding sensitive credentials
+// Security: Prevent exposure of database URLs, API keys, and other sensitive tokens
+function loadSafeEnvConfig(cwd: string): void {
+	const envPath = path.join(cwd, '.env.local');
+	if (fs.existsSync(envPath)) {
+		const env = dotenv.parse(fs.readFileSync(envPath));
+		// Whitelist safe environment variables for GraphQL code generation
+		const safeKeys = [
+			'NEXT_PUBLIC_SALEOR_API_URL',
+			'NEXT_PUBLIC_STOREFRONT_URL',
+			'NODE_ENV',
+		];
+		safeKeys.forEach((key) => {
+			if (env[key]) {
+				process.env[key] = env[key];
+			}
+		});
+		// Ensure no sensitive variables are passed to the GraphQL schema loader
+		if (env.DATABASE_URL || env.API_KEY || env.SECRET_TOKEN) {
+			console.warn(
+				"WARNING: Sensitive environment variables detected in .env.local. " +
+				"Only use NEXT_PUBLIC_* variables for build-time configuration."
+			);
+		}
+	}
+}
+
+loadSafeEnvConfig(process.cwd());
+
+// Validate and sanitize the API URL to prevent SSRF and injection attacks
+function validateApiUrl(urlString: string | undefined): string {
+  if (!urlString) {
+    throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
+  }
+
+  try {
+    const parsedUrl = new url.URL(urlString);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error(`Invalid protocol: ${parsedUrl.protocol}`);
+    }
+    // Ensure URL is an absolute URL
+    if (!parsedUrl.href.startsWith('http')) {
+      throw new Error('URL must be absolute');
+    }
+    return parsedUrl.href;
+  } catch (error) {
+    throw new Error(`Invalid API URL: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
+}
+
+// Validate schema URL (skip validation for local schema.graphql file)
+if (schemaUrl && schemaUrl !== "schema.graphql") {
+	try {
+		schemaUrl = validateApiUrl(schemaUrl);
+	} catch (error) {
+		console.error(
+			error instanceof Error ? error.message : "Invalid GraphQL schema URL",
+		);
+		process.exit(1);
+	}
 }
 
 if (!schemaUrl) {
