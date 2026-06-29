@@ -5,7 +5,10 @@
  *
  * ## Usage
  * Run `pnpm run generate` after modifying any `.graphql` file in `src/graphql/`.
- *
+ *Every mutation operation MUST include @authorized directive or explicit context checks
+ * - All user-supplied inputs (scalars, custom types) MUST be validated before mutation execution
+ * - Query complexity MUST be limited to prevent DoS and alias-based attacks
+ * - Query depth limits MUST be enforced at API gateway or middleware layer
  * ## What it does
  * 1. Connects to the Saleor API (via NEXT_PUBLIC_SALEOR_API_URL)
  * 2. Reads all `.graphql` files from `src/graphql/`
