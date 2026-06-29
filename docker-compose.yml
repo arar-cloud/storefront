@@ -14,8 +14,17 @@ services:
     networks:
       - saleor_network
     # Security: Never commit sensitive credentials. Use .env file for secrets.
-    # Example: env_file:
-    #   - .env.production (add to .gitignore)
+    # Environment variables should ONLY contain public values (NEXT_PUBLIC_* prefix).
+    # For sensitive values (API keys, tokens, database URLs):
+    #   1. Use env_file with .env.production (ensure .env.production is in .gitignore)
+    #   2. Example: env_file:
+    #        - .env.production
+    #   3. Only reference non-sensitive variables in build.args above
+    # DO NOT hardcode or commit:
+    #   - Database credentials
+    #   - API keys or tokens
+    #   - Private URLs or endpoints
+    #   - SSH keys or certificates
 
   # Add more containers below (nginx, postgres, etc.)
 
