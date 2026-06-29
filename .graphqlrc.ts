@@ -35,6 +35,26 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Validate NEXT_PUBLIC_SALEOR_API_URL: reject localhost, internal IPs, and malformed URLs
+if (process.env.NEXT_PUBLIC_SALEOR_API_URL && process.env.GITHUB_ACTION !== "generate-schema-from-file") {
+	try {
+		const urlObj = new URL(process.env.NEXT_PUBLIC_SALEOR_API_URL);
+		const hostname = urlObj.hostname;
+		const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname === "[::1]";
+		if (isLocalhost) {
+			throw new Error(`[Security] NEXT_PUBLIC_SALEOR_API_URL must be a public URL, not localhost or internal IP: ${process.env.NEXT_PUBLIC_SALEOR_API_URL}`);
+		}
+		if (urlObj.protocol !== "https:") {
+			throw new Error(`[Security] NEXT_PUBLIC_SALEOR_API_URL must use HTTPS protocol for security: ${process.env.NEXT_PUBLIC_SALEOR_API_URL}`);
+		}
+	} catch (err) {
+		if (err instanceof Error && err.message.includes("[Security]")) {
+			throw err;
+		}
+		throw new Error(`[Security] Invalid NEXT_PUBLIC_SALEOR_API_URL format: ${String(err)}`);
+	}
+}
+
 const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
