@@ -18,22 +18,15 @@
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import { getValidatedSchemaUrl } from "./.graphqlrc.utils";
 
 loadEnvConfig(process.cwd());
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
-
-if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
-	schemaUrl = "schema.graphql";
-}
-
-if (!schemaUrl) {
-	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
-	);
-	console.error("Follow development instructions in the README.md file.");
-	process.exit(1);
-}
+// Validate and retrieve schema URL with security checks:
+// - Prevents SSRF attacks via untrusted URLs
+// - Validates local file paths to prevent directory traversal
+// - Enforces https for remote endpoints (http only for localhost)
+const schemaUrl = getValidatedSchemaUrl();
 
 const config: CodegenConfig = {
 	overwrite: true,
