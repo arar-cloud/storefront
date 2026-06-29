@@ -15,6 +15,13 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Security Constraints
+ * - All mutations MUST enforce auth/session context and role-based access control
+ * - Query complexity MUST be limited to max_depth=10, max_breadth=20 at API gateway
+ * - Alias attacks MUST be prevented via rate limiting on API side
+ * - All GraphQL inputs use scalar validation (see config.strictScalars)
+ * - Payment operations in checkout module MUST verify order ownership via session
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
