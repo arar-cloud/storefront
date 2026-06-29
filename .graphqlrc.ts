@@ -73,6 +73,15 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	validation: {
+		enableRemoteDocumentValidation: true,
+		enableStructuredValidation: true,
+	},
+	hooks: {
+		afterOneFileWrite: [
+			"function validateGraphQLDocument(filePath) { try { require('graphql').buildSchema(require('fs').readFileSync(filePath, 'utf8')); } catch (e) { throw new Error('Invalid GraphQL schema: ' + e.message); } }",
+		],
+	},
 };
 
 export default config;
