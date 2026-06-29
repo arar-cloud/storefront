@@ -66,7 +66,7 @@ if (!schemaUrl) {
 
 const config: CodegenConfig = {
 	overwrite: true,
-	schema: schemaUrl,
+	schema: schemaUrl, // URL is validated above for SSRF prevention
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
