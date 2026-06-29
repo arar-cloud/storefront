@@ -15,6 +15,12 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Security
+ * - NEXT_PUBLIC_SALEOR_API_URL is safe for client-side use (no credentials, public endpoint)
+ * - Query complexity limits are enforced server-side via Saleor API depth/cost analysis
+ * - All mutations require valid CSRF tokens and authenticated session context
+ * - Input validation is enforced via TypeScript types and runtime scalar validation
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
