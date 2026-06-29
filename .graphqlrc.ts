@@ -15,6 +15,16 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## SECURITY: Custom Checkout Types
+ * CRITICAL: The checkout module defines custom GraphQL types in `src/checkout/graphql/index.ts`
+ * that are DECOUPLED from this generated code. These custom types handle sensitive payment
+ * and order data and must undergo centralized security review to ensure:
+ *   - All user inputs are validated and sanitized
+ *   - Authentication/authorization checks are enforced for payment operations
+ *   - No sensitive data leaks through error messages or logs
+ *   - PCI compliance and payment security standards are met
+ * Any modifications to checkout types REQUIRE security team approval before deployment.
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
