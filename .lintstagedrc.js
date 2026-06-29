@@ -2,10 +2,19 @@
 
 import path from "path";
 
+// Properly escape shell arguments to prevent command injection
+function escapeShellArg(arg) {
+	// If the string contains special characters, wrap it in single quotes and escape single quotes
+	if (/[^\w./-]/.test(arg)) {
+		return "'" + arg.replace(/'/g, "'\\''" ) + "'";
+	}
+	return arg;
+}
+
 const buildEslintCommand = (filenames) => {
 	const files = filenames
 		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => `"${filename}"`)
+		.map((filename) => escapeShellArg(filename))
 		.join(" ");
 
 	return `pnpm eslint --fix ${files}`;

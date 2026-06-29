@@ -21,10 +21,36 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+// Validate NEXT_PUBLIC_SALEOR_API_URL to prevent schema injection/SSRF attacks
+function validateApiUrl(url: string | undefined): string {
+	if (!url) {
+		throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
+	}
+
+	try {
+		const parsedUrl = new URL(url);
+		// Ensure only http and https schemes are allowed
+		if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+			throw new Error(`Invalid protocol "${parsedUrl.protocol}" in NEXT_PUBLIC_SALEOR_API_URL. Only http and https are allowed.`);
+		}
+		return url;
+	} catch (error) {
+		throw new Error(`Invalid NEXT_PUBLIC_SALEOR_API_URL: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
+} else if (schemaUrl) {
+	// Validate URL for non-file schema
+	try {
+		schemaUrl = validateApiUrl(schemaUrl);
+	} catch (error) {
+		console.error(error instanceof Error ? error.message : String(error));
+		process.exit(1);
+	}
 }
 
 if (!schemaUrl) {
