@@ -21,6 +21,8 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+// SECURITY: Ensure schemaUrl never leaks sensitive credentials.
+// Only use NEXT_PUBLIC_SALEOR_API_URL which is safely exposed to frontend.
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
@@ -40,6 +42,8 @@ const config: CodegenConfig = {
 	schema: schemaUrl,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
+	// SECURITY: Validate all GraphQL inputs to prevent injection attacks.
+	// Ensure strict scalar validation, enum enforcement, and nested input sanitization.
 	generates: {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {

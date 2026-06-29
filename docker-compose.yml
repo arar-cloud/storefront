@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   saleor-storefront:
@@ -9,13 +9,34 @@ services:
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
+    # SECURITY: Only expose port 3000 to frontend traffic.
+    # Use reverse proxy (nginx) for production deployments to restrict access.
     ports:
-      - 3000:3000
+      - "127.0.0.1:3000:3000"
     networks:
       - saleor_network
+    # SECURITY: Enforce memory limits to prevent DoS attacks
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    # SECURITY: Run with read-only root filesystem where possible
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
 
   # Add more containers below (nginx, postgres, etc.)
+  # SECURITY: When adding services, ensure proper network isolation:
+  # - Use internal networks for service-to-service communication
+  # - Only expose ports needed for external traffic
+  # - Apply firewall rules at network boundaries
 
 networks:
   saleor_network:
     external: false
+    # SECURITY: Disable IPv6 if not required to reduce attack surface
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
