@@ -26,6 +26,10 @@ const config: CodegenConfig = {
 				useTypeImports: true,
 				strictScalars: true,
 				enumsAsTypes: true,
+				scalarwrappers: {
+					JSON: "Record<string, unknown>",
+				},
+				enumsAsTypes: true,
 				scalars: {
 					Date: "string",
 					DateTime: "string",
