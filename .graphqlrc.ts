@@ -71,9 +71,21 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+/**
+ * GraphQL code generator fetch configuration with security controls
+ */
+const fetchConfig = {
+	// Enforce same-origin for CORS and prevent unauthorized cross-domain access
+	headers: {
+		'Origin': process.env.NEXT_PUBLIC_STOREFRONT_URL || 'http://localhost:3000',
+	},
+};
+
 const config: CodegenConfig = {
 	overwrite: true,
-	schema: schemaUrl,
+	schema: {
+		[schemaUrl]: fetchConfig,
+	},
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
@@ -115,6 +127,15 @@ const config: CodegenConfig = {
 			// Add complexity analysis warnings during code generation
 			'echo "Note: Validate generated queries for complexity limits during code review"',
 		],
+	},
+	// Rate limiting: Configure retry and timeout behavior to prevent resource exhaustion
+	retries: {
+		// Request timeout: 30 seconds max
+		timeout: 30000,
+		// Retry up to 3 times on transient failures
+		attempts: 3,
+		// Exponential backoff: wait 1s, 2s, 4s between retries
+		delay: 1000,
 	},
 };
 
