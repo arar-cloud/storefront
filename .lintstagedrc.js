@@ -4,11 +4,10 @@ import path from "path";
 
 const buildEslintCommand = (filenames) => {
 	const files = filenames
-		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => `"${filename}"`)
-		.join(" ");
+		.map((filename) => path.relative(process.cwd(), filename));
 
-	return `pnpm eslint --fix ${files}`;
+	// Return array format for proper argument escaping: prevents shell injection via filenames
+	return ["pnpm", "eslint", "--fix", ...files];
 };
 
 const config = {
