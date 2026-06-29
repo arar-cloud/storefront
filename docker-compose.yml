@@ -6,13 +6,16 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
-        NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
+        NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL:?Error: NEXT_PUBLIC_SALEOR_API_URL not set}
+        NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL:?Error: NEXT_PUBLIC_STOREFRONT_URL not set}
     restart: always
     ports:
-      - 3000:3000
+      - "3000:3000"
     networks:
       - saleor_network
+    # Security: Never commit sensitive credentials. Use .env file for secrets.
+    # Example: env_file:
+    #   - .env.production (add to .gitignore)
 
   # Add more containers below (nginx, postgres, etc.)
 
