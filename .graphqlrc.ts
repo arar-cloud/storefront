@@ -84,6 +84,10 @@ const config: CodegenConfig = {
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
+				scalarwrappers: {
+					JSON: "Record<string, unknown>",
+				},
+				enumsAsTypes: true,
 				validationSchema: "zod",
 				scalarValidation: true,
 				scalars: {
