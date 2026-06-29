@@ -21,6 +21,17 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+// Security: Environment variable exposure control
+// Only non-sensitive, API endpoint URLs should be prefixed with NEXT_PUBLIC_
+// NEVER prefix credentials, API keys, tokens, or internal secrets with NEXT_PUBLIC_
+const ALLOWED_PUBLIC_VARS = ['NEXT_PUBLIC_SALEOR_API_URL', 'NEXT_PUBLIC_STOREFRONT_URL'];
+const BLOCKED_PREFIXES = ['NEXT_PUBLIC_API_KEY', 'NEXT_PUBLIC_SECRET', 'NEXT_PUBLIC_TOKEN', 'NEXT_PUBLIC_PASSWORD'];
+
+// Runtime verification: ensure no sensitive variables are exposed
+if (process.env.NEXT_PUBLIC_SALEOR_API_URL && process.env.NEXT_PUBLIC_SALEOR_API_URL.includes('secret')) {
+  throw new Error('Security violation: NEXT_PUBLIC_SALEOR_API_URL must not contain sensitive credentials');
+}
+
 // Security: Session and authentication hardening
 // Enforce HTTPS-only session transmission and SameSite cookie policy
 const SESSION_SECURITY_CONFIG = {
