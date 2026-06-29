@@ -20,6 +20,7 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 import * as dotenv from "dotenv";
 import * as path from "path";
 import * as fs from "fs";
+import * as url from "url";
 
 // Load only safe environment variables, excluding sensitive credentials
 function loadSafeEnvConfig(cwd: string): void {
@@ -42,39 +43,26 @@ function loadSafeEnvConfig(cwd: string): void {
 
 loadSafeEnvConfig(process.cwd());
 
-// Validate GraphQL schema URL to prevent SSRF attacks
-function validateGraphQLSchemaUrl(url: string | undefined): string {
-	if (!url) {
-		throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
-	}
+// Validate and sanitize the API URL to prevent SSRF and injection attacks
+function validateApiUrl(urlString: string | undefined): string {
+  if (!urlString) {
+    throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
+  }
 
-	try {
-		const parsedUrl = new URL(url);
-
-		// Enforce HTTPS protocol
-		if (parsedUrl.protocol !== 'https:') {
-			throw new Error('GraphQL schema URL must use HTTPS protocol');
-		}
-
-		// Validate hostname is not a private IP or localhost
-		const hostname = parsedUrl.hostname;
-		if (
-			hostname === 'localhost' ||
-			hostname === '127.0.0.1' ||
-			hostname.startsWith('192.168.') ||
-			hostname.startsWith('10.') ||
-			hostname.startsWith('172.')
-		) {
-			throw new Error('GraphQL schema URL cannot target private IP addresses or localhost');
-		}
-
-		return url;
-	} catch (error) {
-		if (error instanceof TypeError) {
-			throw new Error(`Invalid GraphQL schema URL: ${url}`);
-		}
-		throw error;
-	}
+  try {
+    const parsedUrl = new url.URL(urlString);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error(`Invalid protocol: ${parsedUrl.protocol}`);
+    }
+    // Ensure URL is an absolute URL
+    if (!parsedUrl.href.startsWith('http')) {
+      throw new Error('URL must be absolute');
+    }
+    return parsedUrl.href;
+  } catch (error) {
+    throw new Error(`Invalid API URL: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
@@ -86,7 +74,7 @@ if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 // Validate schema URL (skip validation for local schema.graphql file)
 if (schemaUrl && schemaUrl !== "schema.graphql") {
 	try {
-		schemaUrl = validateGraphQLSchemaUrl(schemaUrl);
+		schemaUrl = validateApiUrl(schemaUrl);
 	} catch (error) {
 		console.error(
 			error instanceof Error ? error.message : "Invalid GraphQL schema URL",
