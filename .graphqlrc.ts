@@ -21,8 +21,37 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+/**
+ * Validate URL to prevent SSRF and injection attacks
+ */
+function isValidSaleorUrl(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		// Only allow http and https protocols
+		if (!['http:', 'https:'].includes(parsed.protocol)) {
+			return false;
+		}
+		// Ensure hostname is not localhost, 127.0.0.1, or similar
+		if (['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(parsed.hostname)) {
+			return false;
+		}
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
+// Validate the API URL to prevent SSRF attacks
+if (schemaUrl && !isValidSaleorUrl(schemaUrl)) {
+	console.error(
+		`Invalid NEXT_PUBLIC_SALEOR_API_URL: ${schemaUrl}. Must be a valid HTTPS URL (not localhost).`,
+	);
+	process.exit(1);
+}
+
+// Allow local schema file for schema generation only
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
 }
