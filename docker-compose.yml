@@ -13,6 +13,43 @@ services:
       - 3000:3000
     networks:
       - saleor_network
+    
+    # Security hardening measures
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    
+    # Read-only root filesystem for immutability
+    read_only: true
+    
+    # Temporary filesystem for runtime needs
+    tmpfs:
+      - /tmp
+      - /var/tmp
+      - /run
+    
+    # Resource limits to prevent container escape via resource exhaustion
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: "1.0"
+    
+    # Non-root user execution (ensure Dockerfile has USER directive)
+    user: "node"
+    
+    # Environment variables via secure .env file (not inline)
+    env_file:
+      - .env
+    
+    # Health check for resilience
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"] || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Add more containers below (nginx, postgres, etc.)
 
