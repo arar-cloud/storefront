@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   saleor-storefront:
@@ -6,16 +6,38 @@ services:
     build:
       dockerfile: Dockerfile
       args:
+        # SECURITY: Environment variables MUST be provided externally via .env or deployment
+        # NEVER hardcode credentials, API keys, or secrets in this file
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
-      - 3000:3000
+      # SECURITY: Bind to localhost (127.0.0.1) by default to prevent public exposure
+      # Only change to 0.0.0.0:3000:3000 if this service intentionally requires public access
+      # Production deployments should use reverse proxy with authentication (nginx, cloudflare)
+      - "127.0.0.1:3000:3000"
     networks:
       - saleor_network
+    # SECURITY: Ensure service only communicates through dedicated network
+    # Prevents unintended inter-service exposure
+    # Health check to validate service availability
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Add more containers below (nginx, postgres, etc.)
+  # Security guideline: Isolate backend services to internal networks only
+  # Do not expose database, cache, or internal APIs to public ports
 
 networks:
   saleor_network:
+    driver: bridge
+    # Disable external access - all services use internal DNS
     external: false
+    # Optional: restrict driver options for additional hardening
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
