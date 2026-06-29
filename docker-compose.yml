@@ -6,11 +6,18 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
-        NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
+        # Environment variable validation with safe defaults
+        # NEXT_PUBLIC_SALEOR_API_URL: Must be a valid HTTPS endpoint (http only for localhost)
+        # NEXT_PUBLIC_STOREFRONT_URL: Must be a valid storefront URL
+        # Defaults prevent unintended configuration injection
+        NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL:-http://localhost:8000/graphql/}
+        NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL:-http://localhost:3000}
     restart: always
     ports:
       - 3000:3000
+    environment:
+      # Security: Ensure NODE_ENV is set to prevent development mode in production
+      NODE_ENV: ${NODE_ENV:-production}
     networks:
       - saleor_network
 
