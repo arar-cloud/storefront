@@ -19,6 +19,10 @@
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
+// GraphQL complexity and DoS prevention settings
+const GRAPHQL_QUERY_DEPTH_LIMIT = 10;
+const GRAPHQL_QUERY_COMPLEXITY_LIMIT = 1000;
+
 loadEnvConfig(process.cwd());
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
@@ -72,6 +76,12 @@ const config: CodegenConfig = {
 				fragmentMasking: false,
 			},
 		},
+	},
+	complexity: {
+		enabled: true,
+		maxDepth: GRAPHQL_QUERY_DEPTH_LIMIT,
+		maxComplexity: GRAPHQL_QUERY_COMPLEXITY_LIMIT,
+		maxComplexityError: "Query complexity too high. Maximum allowed: " + GRAPHQL_QUERY_COMPLEXITY_LIMIT,
 	},
 	validation: {
 		enableRemoteDocumentValidation: true,
