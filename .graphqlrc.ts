@@ -22,6 +22,11 @@
  * - Alias attacks MUST be prevented via rate limiting on API side
  * - All GraphQL inputs use scalar validation (see config.strictScalars)
  * - Payment operations in checkout module MUST verify order ownership via session
+ * - Checkout mutations (src/checkout/graphql/*.ts) MUST validate:
+ *   - User context ownership of order being modified
+ *   - Session token validity and expiration
+ *   - Payment method does not allow changing order after payment initiated
+ *   - Introspection disabled in production to prevent schema enumeration
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
