@@ -6,13 +6,15 @@ const buildEslintCommand = (filenames) => {
 	const cwd = process.cwd();
 	const safeFilenames = filenames
 		.map((filename) => {
-			// Normalize to prevent path traversal attacks (../ sequences)
-			const normalized = path.normalize(path.relative(cwd, filename));
-			// Ensure the resolved path doesn't escape the project root
-			if (normalized.startsWith('..')) {
+			// Resolve to absolute path and validate it stays within project root
+			const resolved = path.resolve(filename);
+			const cwdResolved = path.resolve(cwd);
+			if (!resolved.startsWith(cwdResolved + path.sep) && resolved !== cwdResolved) {
 				console.warn(`Warning: File path ${filename} resolves outside project root, skipping`);
 				return null;
 			}
+			// Return relative path for command construction
+			const normalized = path.relative(cwdResolved, resolved);
 			return normalized;
 		})
 		.filter(Boolean)
