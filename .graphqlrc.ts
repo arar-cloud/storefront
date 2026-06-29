@@ -40,6 +40,10 @@ const config: CodegenConfig = {
 	schema: schemaUrl,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
+	// Security: Enforce strict input type validation to prevent injection attacks
+	strictInputTypes: true,
+	// Security: Enable schema validation for all generated documents
+	validateSchema: true,
 	generates: {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
