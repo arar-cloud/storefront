@@ -100,6 +100,11 @@ const config: CodegenConfig = {
 				},
 				enumsAsTypes: true,
 				validationSchema: "zod",
+				// Security: All mutations using generated hooks MUST validate inputs via middleware
+				// - Input validation middleware enforced on API layer before resolver execution
+				// - Zod schemas auto-generated and MUST be applied to all user-supplied mutation inputs
+				// - No bypass of validation allowed; client-side validation is NOT sufficient
+				scalarValidation: true,
 				scalarValidation: true,
 				scalars: {
 					Date: "string",
