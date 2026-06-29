@@ -1,8 +1,11 @@
 version: "3.8"
 
-# Security: All sensitive credentials must be provided via environment variables
-# Never hardcode passwords, API keys, or database credentials in this file
-# Use .env file or deployment secrets management (e.g., Docker Secrets, Kubernetes Secrets)
+# Security: Credential and Access Control Hardening
+# 1. All sensitive credentials (passwords, API keys) must be provided via environment variables
+# 2. Use .env.local or Docker Secrets / Kubernetes Secrets in production
+# 3. Database users must have minimal required privileges (not superuser)
+# 4. Never commit .env files to version control
+# 5. Rotate credentials regularly and audit access logs
 
 services:
   saleor-storefront:
@@ -19,6 +22,11 @@ services:
     # Security: Use environment file for secrets, not hardcoded values
     env_file:
       - .env.local
+    # Security: Restrict environment variable exposure to required variables only
+    environment:
+      # Only expose non-sensitive public variables
+      NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
+      NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     # Security: Set resource limits to prevent resource exhaustion attacks
     deploy:
       resources:
