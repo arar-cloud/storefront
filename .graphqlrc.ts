@@ -72,6 +72,9 @@ const config: CodegenConfig = {
 	// All mutations must be validated against CSRF tokens to prevent
 	// unauthorized state changes from third-party sites
 	csrfProtectionEnabled: true,
+	// Security: CSRF and session validation rules for mutations
+	// All mutations must include X-CSRF-Token header and valid session context
+	// Session tokens are validated server-side; client must never expose session secrets
 	// Security: Enforce strict input type validation to prevent injection attacks
 	strictInputTypes: true,
 	// Security: Enable schema validation for all generated documents
