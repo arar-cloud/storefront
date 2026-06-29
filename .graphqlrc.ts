@@ -21,10 +21,46 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+/**
+ * Validate and sanitize GraphQL schema URL from environment variables
+ * Ensures only valid HTTPS URLs are accepted to prevent injection attacks
+ */
+function validateSchemaUrl(url: string | undefined): string {
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is required');
+  }
+  
+  try {
+    const parsed = new URL(url);
+    
+    // Enforce HTTPS protocol for production security
+    if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
+      throw new Error('NEXT_PUBLIC_SALEOR_API_URL must use HTTPS protocol in production');
+    }
+    
+    // Reject URLs with authentication credentials embedded
+    if (parsed.username || parsed.password) {
+      throw new Error('NEXT_PUBLIC_SALEOR_API_URL must not contain embedded credentials');
+    }
+    
+    return url;
+  } catch (error) {
+    throw new Error(`Invalid NEXT_PUBLIC_SALEOR_API_URL: ${error instanceof Error ? error.message : 'Invalid URL format'}`);
+  }
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
+} else {
+	try {
+		schemaUrl = validateSchemaUrl(schemaUrl);
+	} catch (error) {
+		console.error((error as Error).message);
+		console.error("Follow development instructions in the README.md file.");
+		process.exit(1);
+	}
 }
 
 if (!schemaUrl) {
