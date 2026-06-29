@@ -68,6 +68,10 @@ const config: CodegenConfig = {
 	schema: schemaUrl,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
+	// Security: CSRF protection for GraphQL mutations
+	// All mutations must be validated against CSRF tokens to prevent
+	// unauthorized state changes from third-party sites
+	csrfProtectionEnabled: true,
 	// Security: Enforce strict input type validation to prevent injection attacks
 	strictInputTypes: true,
 	// Security: Enable schema validation for all generated documents
