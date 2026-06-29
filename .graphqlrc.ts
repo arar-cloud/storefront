@@ -23,6 +23,7 @@ import * as fs from "fs";
 import * as url from "url";
 
 // Load only safe environment variables, excluding sensitive credentials
+// Security: Prevent exposure of database URLs, API keys, and other sensitive tokens
 function loadSafeEnvConfig(cwd: string): void {
 	const envPath = path.join(cwd, '.env.local');
 	if (fs.existsSync(envPath)) {
@@ -38,6 +39,13 @@ function loadSafeEnvConfig(cwd: string): void {
 				process.env[key] = env[key];
 			}
 		});
+		// Ensure no sensitive variables are passed to the GraphQL schema loader
+		if (env.DATABASE_URL || env.API_KEY || env.SECRET_TOKEN) {
+			console.warn(
+				"WARNING: Sensitive environment variables detected in .env.local. " +
+				"Only use NEXT_PUBLIC_* variables for build-time configuration."
+			);
+		}
 	}
 }
 
