@@ -25,6 +25,41 @@ const GRAPHQL_QUERY_COMPLEXITY_LIMIT = 1000;
 
 loadEnvConfig(process.cwd());
 
+/**
+ * Validate local schema file when used as fallback
+ */
+function validateSchemaFile(schemaPath: string): void {
+	const fs = require("fs");
+	const path = require("path");
+	const absPath = path.resolve(process.cwd(), schemaPath);
+	
+	// Check if file exists
+	if (!fs.existsSync(absPath)) {
+		throw new Error(`Schema file not found: ${absPath}`);
+	}
+	
+	// Check file permissions - ensure not writable by group/others
+	const stats = fs.statSync(absPath);
+	const mode = stats.mode;
+	if ((mode & 0o022) !== 0) {
+		throw new Error(`Schema file has insecure permissions: ${mode.toString(8)}. Should not be writable by group/others.`);
+	}
+	
+	// Validate schema structure by parsing
+	try {
+		const content = fs.readFileSync(absPath, "utf8");
+		const graphql = require("graphql");
+		graphql.buildSchema(content);
+	} catch (error) {
+		throw new Error(`Invalid GraphQL schema in file: ${error.message}`);
+	}
+}
+
+// Validate schema file if using fallback
+if (process.env.GITHUB_ACTION === "generate-schema-from-file" && process.env.SCHEMA_FILE) {
+	validateSchemaFile(process.env.SCHEMA_FILE);
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
