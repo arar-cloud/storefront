@@ -54,6 +54,16 @@ services:
       retries: 3
       start_period: 40s
 
+  # Database service security configuration (if database service exists):
+  # - Create dedicated database user (not root/admin)
+  # - Grant only required permissions: SELECT, INSERT, UPDATE on application tables
+  # - Revoke: DROP, ALTER, CREATE database privileges
+  # - Use strong randomly-generated password (minimum 32 characters)
+  # - Enable SSL/TLS for database connections in production
+  # - Rotate credentials every 90 days
+  # - Enable audit logging for all mutations
+  # - Restrict database network access to application container only
+
   # Add more containers below (nginx, postgres, redis, etc.)
   # Security guidelines for additional services:
   # - Database: Use strong credentials from secrets, enforce minimal user privileges
