@@ -26,6 +26,8 @@ const buildEslintCommand = (filenames) => {
 	return `pnpm eslint --fix ${safeFilenames}`;
 };
 
+// Security note: prettier --write --ignore-unknown is hardcoded and does not accept staged filenames,
+// preventing command injection via filename arguments. Do not modify this to pass filenames directly.
 const config = {
 	"*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": [buildEslintCommand],
 	"*.*": "prettier --write --ignore-unknown",
