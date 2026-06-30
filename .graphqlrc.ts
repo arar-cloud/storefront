@@ -125,6 +125,19 @@ const config: CodegenConfig = {
 	 * 
 	 * Reference: src/graphql/mutations/ - ensure each mutation has auth guards
 	 */
+	/**
+	 * SECURITY: Checkout Module Type Validation
+	 * Custom checkout types in src/checkout/graphql/index.ts MUST include:
+	 * 1. Explicit runtime validation for payment data
+	 * 2. Type guards for session data structures
+	 * 3. No unsafe type assumptions on currency, amounts, or payment tokens
+	 * 
+	 * All checkout GraphQL types must be validated at runtime, not relying solely
+	 * on code generation. Implement validation functions for:
+	 * - Payment method validation
+	 * - Session/token expiration checks
+	 * - Amount and currency format validation
+	 */
 };
 
 export default config;
