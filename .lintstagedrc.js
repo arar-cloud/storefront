@@ -1,9 +1,11 @@
 // https://nextjs.org/docs/basic-features/eslint#lint-staged
 
 import path from "path";
+import { fileURLToPath } from "url";
 
 // Use __dirname to get the project root reliably, avoiding process.cwd() issues in CI/CD
-const projectRoot = path.dirname(new URL(import.meta.url).pathname);
+const __filename = fileURLToPath(import.meta.url);
+const projectRoot = path.dirname(__filename);
 
 const buildEslintCommand = (filenames) => {
 	const files = filenames
