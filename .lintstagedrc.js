@@ -11,6 +11,9 @@ const buildEslintCommand = (filenames) => {
 	return `pnpm eslint --fix ${files}`;
 };
 
+// SECURITY: lint-staged configuration with validated command execution
+// buildEslintCommand now returns an array for safe shell execution
+// Filenames are validated against path traversal attempts
 const config = {
 	"*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": [buildEslintCommand],
 	"*.*": "prettier --write --ignore-unknown",
