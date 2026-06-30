@@ -19,26 +19,39 @@
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
-// Validate and sanitize environment loading
-const validateEnvConfig = () => {
+// Validate and sanitize environment variables before use
+const loadAndValidateEnv = () => {
   loadEnvConfig(process.cwd());
   
-  // Restrict to whitelisted environment variables only
-  const allowedEnvVars = [
-    'NEXT_PUBLIC_SALEOR_API_URL',
-    'NEXT_PUBLIC_STOREFRONT_URL',
-  ];
+  const apiUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
   
-  // Validate schema URL format
-  const schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
-  if (schemaUrl && !/^https?:\/\/[^\s]+$/.test(schemaUrl)) {
-    throw new Error('Invalid NEXT_PUBLIC_SALEOR_API_URL format');
+  // Validate API URL format
+  if (!apiUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_SALEOR_API_URL environment variable is required"
+    );
   }
+  
+  // Strict validation: only allow https URLs
+  try {
+    const url = new URL(apiUrl);
+    if (url.protocol !== "https:" && process.env.NODE_ENV === "production") {
+      throw new Error(
+        "NEXT_PUBLIC_SALEOR_API_URL must use HTTPS in production"
+      );
+    }
+  } catch (error) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_SALEOR_API_URL: ${apiUrl}. Error: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+  
+  return apiUrl;
 };
 
-validateEnvConfig();
+const apiUrl = loadAndValidateEnv();
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+let schemaUrl = apiUrl;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
