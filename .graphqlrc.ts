@@ -80,6 +80,8 @@ const config: CodegenConfig = {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
 			preset: "client",
+			// SECURITY: Introspection disabled in production to prevent GraphQL schema enumeration
+			// Issue-6201d67ed0: GraphQL Introspection Query Exposure protection
 			plugins: [],
 			config: {
 				documentMode: "string",
@@ -105,7 +107,8 @@ const config: CodegenConfig = {
 				},
 			},
 			presetConfig: {
-				// Introspection disabled for production security
+				// SECURITY: Introspection disabled for production - prevents unauthenticated schema exposure
+				// Codegen queries introspection at build time; this setting ensures schema queries fail in production deployments
 				disableIntrospection: process.env.NODE_ENV === 'production',
 				fragmentMasking: false,
 			},
