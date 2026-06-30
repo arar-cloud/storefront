@@ -6,18 +6,27 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        # SECURITY: Use secrets or environment files, not build args for sensitive data
+        # SECURITY: Public environment variables only. Never pass secrets via build args.
+        # Use .env.production or Docker secrets for sensitive data.
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
       - "3000:3000"
-    # SECURITY: Use environment file instead of inline environment variables
+    # SECURITY: Environment file loaded at runtime, not during build
+    # Ensure .env.production is not committed to version control
     env_file:
       - .env.production
-    # SECURITY: Do not mount secrets as volumes; use Docker secrets instead
+    # SECURITY: For Docker Swarm deployments, use Docker secrets instead of env_file:
+    # secrets:
+    #   - saleor_api_key
+    # environment:
+    #   - SALEOR_API_KEY_FILE=/run/secrets/saleor_api_key
+    #
+    # SECURITY: Volume mounts should be read-only where possible
+    # Do NOT mount secret files as world-readable volumes
     # volumes:
-    #   - secret_volume:/run/secrets
+    #   - ./config:/etc/saleor:ro
     networks:
       - saleor_network
     # SECURITY: Set resource limits to prevent DoS
@@ -39,6 +48,28 @@ services:
 networks:
   saleor_network:
     external: false
+
+# SECURITY: For production use with Docker Swarm, define secrets here:
+# secrets:
+#   saleor_api_key:
+#     external: true
+#   saleor_db_password:
+#     external: true
+#
+# Then reference them in services using:
+#   secrets:
+#     - saleor_api_key
+#     - saleor_db_password
+#
+# Load secrets into the container via environment variables:
+#   environment:
+#     - SALEOR_API_KEY_FILE=/run/secrets/saleor_api_key
+#
+# IMPORTANT:
+# 1. NEVER commit .env.production to version control
+# 2. NEVER commit credentials or API keys to docker-compose.yml
+# 3. Use Docker secrets for production Swarm deployments
+# 4. Use external secret management (Vault, AWS Secrets Manager) for orchestration
 
 # SECURITY NOTES:
 # 1. Use .env.production file for sensitive environment variables (never commit)
