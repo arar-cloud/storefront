@@ -96,4 +96,12 @@ const config: CodegenConfig = {
 // 4. Timeout enforcement - kill queries exceeding execution time
 // Example middleware: use graphql-depth-limit and graphql-query-complexity
 
+// SECURITY: Rate Limiting & DoS Protection
+// GraphQL queries should be protected against:
+// 1. Deep nesting attacks (implement maxDepth: 10 in validation)
+// 2. High complexity queries (track field/list sizes and limit to complexity budget)
+// 3. Rate limiting per IP/user (implement in API gateway or middleware)
+// 4. Query timeout enforcement (prevent long-running queries from hanging)
+// Saleor API should enforce these at server-side, but validate on client requests too.
+
 export default config;
