@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   saleor-storefront:
@@ -6,16 +6,46 @@ services:
     build:
       dockerfile: Dockerfile
       args:
+        # SECURITY: Use secrets or environment files, not build args for sensitive data
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
-      - 3000:3000
+      - "3000:3000"
+    # SECURITY: Use environment file instead of inline environment variables
+    env_file:
+      - .env.production
+    # SECURITY: Do not mount secrets as volumes; use Docker secrets instead
+    # volumes:
+    #   - secret_volume:/run/secrets
     networks:
       - saleor_network
+    # SECURITY: Set resource limits to prevent DoS
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    # SECURITY: Use non-root user if possible
+    # user: "1000:1000"
+    # SECURITY: Set read-only filesystem where applicable
+    read_only: false
 
   # Add more containers below (nginx, postgres, etc.)
 
 networks:
   saleor_network:
     external: false
+
+# SECURITY NOTES:
+# 1. Use .env.production file for sensitive environment variables (never commit)
+# 2. For production, implement Docker secrets:
+#    - Create secrets: docker secret create api_url <(echo $NEXT_PUBLIC_SALEOR_API_URL)
+#    - Reference in service: secrets: [api_url]
+# 3. Use environment variable validation in application startup
+# 4. Enable Docker content trust (DCT) for image verification
+# 5. Use minimal base images and regular security scanning
+# 6. Consider using HashiCorp Vault or AWS Secrets Manager for credential rotation
