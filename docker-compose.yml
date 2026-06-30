@@ -6,7 +6,7 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        # SECURITY: Build args are read from environment variables only
+        # SECURITY CRITICAL: Build args are read from environment variables only
         # DO NOT hardcode secrets here. Use .env file or orchestrator secrets
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
