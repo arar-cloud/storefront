@@ -111,6 +111,20 @@ const config: CodegenConfig = {
 			},
 		},
 	},
+	/**
+	 * SECURITY: Mutation Authorization Guards
+	 * All mutations in src/graphql/ MUST enforce:
+	 * 1. Session validation before execution
+	 * 2. User authentication checks
+	 * 3. Permission-based access control for checkout, payment, cart operations
+	 * 
+	 * Implement authorization middleware in resolvers to validate:
+	 * - User identity and session validity
+	 * - Payment data sanitization and validation
+	 * - Cart state consistency before checkout mutations
+	 * 
+	 * Reference: src/graphql/mutations/ - ensure each mutation has auth guards
+	 */
 };
 
 export default config;
