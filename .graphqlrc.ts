@@ -18,8 +18,12 @@
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import path from "path";
 
-loadEnvConfig(process.cwd());
+// Load environment from the project root, not current working directory
+// This prevents CI/CD context issues where process.cwd() may be unexpected
+const projectRoot = path.resolve(path.dirname(__filename));
+loadEnvConfig(projectRoot);
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
@@ -33,6 +37,19 @@ if (!schemaUrl) {
 	);
 	console.error("Follow development instructions in the README.md file.");
 	process.exit(1);
+}
+
+// Security check: schema endpoint must be HTTPS and not contain basic auth or tokens
+if (schemaUrl !== "schema.graphql" && !schemaUrl.startsWith("https://")) {
+	console.warn(
+		"WARNING: NEXT_PUBLIC_SALEOR_API_URL should use HTTPS. HTTP endpoints may expose sensitive data during build.",
+	);
+}
+if (schemaUrl.includes("@") || schemaUrl.includes("?key=") || schemaUrl.includes("?token=")) {
+	throw new Error(
+		"SECURITY ERROR: NEXT_PUBLIC_SALEOR_API_URL contains credentials (basic auth or query params). " +
+		"Remove all credentials; use environment-specific authentication instead.",
+	);
 }
 
 const config: CodegenConfig = {
