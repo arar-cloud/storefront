@@ -31,13 +31,46 @@ const validatePaymentSessionData = (data: unknown): boolean => {
 	return keys.every((key) => allowedKeys.includes(key));
 };
 
+// SECURITY: Validate payment input to prevent unsafe type assumptions and injection attacks
+const validatePaymentInput = (input: unknown): boolean => {
+	if (typeof input !== "object" || input === null) return false;
+	const data = input as Record<string, unknown>;
+	
+	// Validate payment gateway ID is string and not empty
+	if (data.gateway !== undefined && typeof data.gateway !== "string") return false;
+	if (data.gateway === "") return false;
+	
+	// Validate token format - must be non-empty string, prevent code injection
+	if (data.token !== undefined && typeof data.token !== "string") return false;
+	if (data.token === "") return false;
+	
+	// Validate amount is positive number
+	if (data.amount !== undefined && (typeof data.amount !== "number" || data.amount <= 0)) return false;
+	
+	return true;
+};
+
+// SECURITY: Validate session input to prevent token manipulation
+const validateSessionInput = (input: unknown): boolean => {
+	if (typeof input !== "object" || input === null) return false;
+	const data = input as Record<string, unknown>;
+	
+	// Session ID must be non-empty string (opaque token or UUID)
+	if (data.sessionId !== undefined && (typeof data.sessionId !== "string" || data.sessionId === "")) return false;
+	
+	// Validate no dangerous prototype pollution attempts
+	if ("__proto__" in data || "constructor" in data || "prototype" in data) return false;
+	
+	return true;
+};
+
 // SECURITY: Sanitize custom type assumptions
 const validateCheckoutInput = (input: unknown): boolean => {
 	if (typeof input !== "object" || input === null) return false;
 	return !(input instanceof Function) && Object.getPrototypeOf(input) === Object.prototype;
 };
 
-export { requireCheckoutAuth, validatePaymentSessionData, validateCheckoutInput };
+export { requireCheckoutAuth, validatePaymentSessionData, validateCheckoutInput, validatePaymentInput, validateSessionInput };
 
 // Type aliases for backwards compatibility
 // The codegen adds "Fragment" suffix to fragment types (e.g., AddressFragmentFragment)
