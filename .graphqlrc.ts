@@ -52,6 +52,25 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Input sanitization helper for GraphQL queries
+const sanitizeGraphQLInput = (input: string): string => {
+  if (typeof input !== 'string') {
+    throw new TypeError('GraphQL input must be a string');
+  }
+  // Remove potential injection payloads
+  return input
+    .replace(/[<>"']/g, (char) => {
+      const map: Record<string, string> = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      };
+      return map[char];
+    })
+    .trim();
+};
+
 const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
