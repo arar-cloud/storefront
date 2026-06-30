@@ -2,9 +2,12 @@
 
 import path from "path";
 
+// Use __dirname to get the project root reliably, avoiding process.cwd() issues in CI/CD
+const projectRoot = path.dirname(new URL(import.meta.url).pathname);
+
 const buildEslintCommand = (filenames) => {
 	const files = filenames
-		.map((filename) => path.relative(process.cwd(), filename))
+		.map((filename) => path.relative(projectRoot, filename))
 		.map((filename) => `"${filename}"`)
 		.join(" ");
 
