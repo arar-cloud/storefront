@@ -28,6 +28,10 @@ loadEnvConfig(process.cwd());
 
 // SECURITY: Use server-side SALEOR_API_URL for build-time schema access
 // Never expose actual API URL as NEXT_PUBLIC_* in client code
+// SECURITY: NEXT_PUBLIC_* variables are exposed to client-side code.
+// Only use for non-sensitive configuration like API endpoints.
+// NEVER store API keys, tokens, or secrets in NEXT_PUBLIC_* variables.
+// Sensitive credentials must be server-side only (use SALEOR_API_TOKEN for backend)
 let schemaUrl = process.env.SALEOR_API_URL || process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
