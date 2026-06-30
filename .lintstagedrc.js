@@ -12,10 +12,11 @@ const buildEslintCommand = (filenames) => {
 };
 
 // SECURITY: lint-staged configuration with validated command execution
-// buildEslintCommand now returns an array for safe shell execution
-// Filenames are validated against path traversal attempts
+// buildEslintCommand returns an array for safe shell execution (lint-staged v13+)
+// Filenames are validated against path traversal and command injection attempts
+// Array format prevents shell metacharacter interpretation
 const config = {
-	"*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": [buildEslintCommand],
+	"*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": buildEslintCommand,
 	"*.*": "prettier --write --ignore-unknown",
 };
 
