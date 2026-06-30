@@ -105,6 +105,8 @@ const config: CodegenConfig = {
 				},
 			},
 			presetConfig: {
+				// Introspection disabled for production security
+				disableIntrospection: process.env.NODE_ENV === 'production',
 				fragmentMasking: false,
 			},
 		},
