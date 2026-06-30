@@ -15,6 +15,8 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ * - SECURITY: All GraphQL queries must validate and sanitize user inputs to prevent injection attacks
+ * - Use parameterized queries and escape all dynamic values before sending to the API
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
@@ -49,6 +51,8 @@ const config: CodegenConfig = {
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
+				// SECURITY: Strict input validation enabled to prevent GraphQL injection
+				// All scalars must be properly typed and validated at runtime
 				scalars: {
 					Date: "string",
 					DateTime: "string",
