@@ -14,11 +14,18 @@ services:
     ports:
       - 3000:3000
     env_file:
-      # Load environment variables from external file (never commit secrets to git)
+      # SECURITY CRITICAL: Load environment variables from .env.local only
+      # - .env.local must NEVER be committed to git (add to .gitignore)
+      # - Use orchestrator secrets (Docker Swarm, Kubernetes) for production
+      # - Never hardcode API keys, auth tokens, or sensitive credentials
       - .env.local
     environment:
       # SECURITY: Runtime environment variables should only reference non-sensitive configs
-      # Use Docker secrets (docker swarm) or mounted secret files for sensitive data
+      # BEST PRACTICES:
+      # - Never hardcode secrets (API keys, auth tokens, database passwords) in this file
+      # - For production, use Docker secrets (docker swarm), Kubernetes secrets, or HashiCorp Vault
+      # - For development, use .env.local with proper .gitignore rules
+      # - Rotate secrets regularly and audit access logs
       NODE_ENV: production
     networks:
       - saleor_network
