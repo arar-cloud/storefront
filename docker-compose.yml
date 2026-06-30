@@ -17,11 +17,14 @@ services:
     # Ensure .env.production is not committed to version control
     env_file:
       - .env.production
-    # SECURITY: For Docker Swarm deployments, use Docker secrets instead of env_file:
+    # SECURITY: NEVER commit .env.production - add to .gitignore
+    # For Docker Swarm deployments, use Docker secrets instead of env_file:
     # secrets:
     #   - saleor_api_key
+    #   - database_password
     # environment:
-    #   - SALEOR_API_KEY_FILE=/run/secrets/saleor_api_key
+    #   SALEOR_API_KEY_FILE: /run/secrets/saleor_api_key
+    #   DB_PASSWORD_FILE: /run/secrets/database_password
     #
     # SECURITY: Volume mounts should be read-only where possible
     # Do NOT mount secret files as world-readable volumes
@@ -41,6 +44,7 @@ services:
     # SECURITY: Use non-root user if possible
     # user: "1000:1000"
     # SECURITY: Set read-only filesystem where applicable
+    # read_only: true  # Enable for production if application supports it
     read_only: false
 
   # Add more containers below (nginx, postgres, etc.)
