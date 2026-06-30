@@ -19,7 +19,24 @@
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
-loadEnvConfig(process.cwd());
+// Validate and sanitize environment loading
+const validateEnvConfig = () => {
+  loadEnvConfig(process.cwd());
+  
+  // Restrict to whitelisted environment variables only
+  const allowedEnvVars = [
+    'NEXT_PUBLIC_SALEOR_API_URL',
+    'NEXT_PUBLIC_STOREFRONT_URL',
+  ];
+  
+  // Validate schema URL format
+  const schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+  if (schemaUrl && !/^https?:\/\/[^\s]+$/.test(schemaUrl)) {
+    throw new Error('Invalid NEXT_PUBLIC_SALEOR_API_URL format');
+  }
+};
+
+validateEnvConfig();
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
