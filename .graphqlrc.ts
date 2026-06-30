@@ -23,7 +23,9 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+// SECURITY: Use server-side SALEOR_API_URL for build-time schema access
+// Never expose actual API URL as NEXT_PUBLIC_* in client code
+let schemaUrl = process.env.SALEOR_API_URL || process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
@@ -39,7 +41,7 @@ if (!schemaUrl) {
 
 const config: CodegenConfig = {
 	overwrite: true,
-	schema: schemaUrl,
+	schema: schemaUrl || "",
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
