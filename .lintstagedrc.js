@@ -3,12 +3,13 @@
 import path from "path";
 
 const buildEslintCommand = (filenames) => {
-	const files = filenames
-		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => `"${filename}"`)
-		.join(" ");
+	// SECURITY: Use array-based command execution to prevent shell injection
+	// lint-staged v13+ supports array format which prevents metacharacter interpretation
+	const files = filenames.map((filename) => 
+		path.relative(process.cwd(), filename)
+	);
 
-	return `pnpm eslint --fix ${files}`;
+	return ["pnpm", "eslint", "--fix", ...files];
 };
 
 // SECURITY: lint-staged configuration with validated command execution
