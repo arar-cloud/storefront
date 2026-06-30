@@ -81,4 +81,12 @@ const config: CodegenConfig = {
 	},
 };
 
+// SECURITY: Rate Limiting & Query Complexity
+// Implement the following protections in your GraphQL server:
+// 1. Query complexity analysis - reject overly complex queries
+// 2. Depth limiting - restrict query nesting levels
+// 3. Rate limiting - limit queries per user/IP per time window
+// 4. Timeout enforcement - kill queries exceeding execution time
+// Example middleware: use graphql-depth-limit and graphql-query-complexity
+
 export default config;
