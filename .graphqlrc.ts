@@ -17,6 +17,9 @@
  * - Always run `pnpm run generate` after changing GraphQL queries
  * - SECURITY: All GraphQL queries must validate and sanitize user inputs to prevent injection attacks
  * - Use parameterized queries and escape all dynamic values before sending to the API
+ * - Validate input types, lengths, and formats before passing to mutations
+ * - Use GraphQL input type validation at schema level
+ * - Sanitize string inputs to prevent XSS and injection attacks
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
