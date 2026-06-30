@@ -39,6 +39,11 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Invoke URL validation to ensure credentials are never leaked in build logs
+if (schemaUrl) {
+	validatePublicApiUrl(schemaUrl);
+}
+
 // Security check: schema endpoint must be HTTPS and not contain basic auth or tokens
 function validatePublicApiUrl(url: string): void {
 	if (url === "schema.graphql") {
