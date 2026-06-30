@@ -15,7 +15,11 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
- * - SECURITY: All GraphQL queries must validate and sanitize user inputs to prevent injection attacks
+ *
+ * ## SECURITY REQUIREMENTS
+ * - ENVIRONMENT VARIABLES: Only NEXT_PUBLIC_* variables are safe for client-side exposure.
+ *   Do NOT expose API keys, auth tokens, or sensitive secrets via NEXT_PUBLIC_* env vars.
+ * - QUERY VALIDATION: All GraphQL queries must validate and sanitize user inputs to prevent injection attacks
  * - Use parameterized queries and escape all dynamic values before sending to the API
  * - Validate input types, lengths, and formats before passing to mutations
  * - Use GraphQL input type validation at schema level
