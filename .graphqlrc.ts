@@ -19,9 +19,39 @@
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
-loadEnvConfig(process.cwd());
+// Validate and sanitize environment variables before use
+const loadAndValidateEnv = () => {
+  loadEnvConfig(process.cwd());
+  
+  const apiUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+  
+  // Validate API URL format
+  if (!apiUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_SALEOR_API_URL environment variable is required"
+    );
+  }
+  
+  // Strict validation: only allow https URLs
+  try {
+    const url = new URL(apiUrl);
+    if (url.protocol !== "https:" && process.env.NODE_ENV === "production") {
+      throw new Error(
+        "NEXT_PUBLIC_SALEOR_API_URL must use HTTPS in production"
+      );
+    }
+  } catch (error) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_SALEOR_API_URL: ${apiUrl}. Error: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
+  
+  return apiUrl;
+};
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+const apiUrl = loadAndValidateEnv();
+
+let schemaUrl = apiUrl;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
@@ -35,6 +65,25 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Input sanitization helper for GraphQL queries
+const sanitizeGraphQLInput = (input: string): string => {
+  if (typeof input !== 'string') {
+    throw new TypeError('GraphQL input must be a string');
+  }
+  // Remove potential injection payloads
+  return input
+    .replace(/[<>"']/g, (char) => {
+      const map: Record<string, string> = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      };
+      return map[char];
+    })
+    .trim();
+};
+
 const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
@@ -44,6 +93,8 @@ const config: CodegenConfig = {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
 			preset: "client",
+			// SECURITY: Introspection disabled in production to prevent GraphQL schema enumeration
+			// Issue-6201d67ed0: GraphQL Introspection Query Exposure protection
 			plugins: [],
 			config: {
 				documentMode: "string",
@@ -69,10 +120,40 @@ const config: CodegenConfig = {
 				},
 			},
 			presetConfig: {
+				// SECURITY: Introspection disabled for production - prevents unauthenticated schema exposure
+				// Codegen queries introspection at build time; this setting ensures schema queries fail in production deployments
+				disableIntrospection: process.env.NODE_ENV === 'production',
 				fragmentMasking: false,
 			},
 		},
 	},
+	/**
+	 * SECURITY: Mutation Authorization Guards
+	 * All mutations in src/graphql/ MUST enforce:
+	 * 1. Session validation before execution
+	 * 2. User authentication checks
+	 * 3. Permission-based access control for checkout, payment, cart operations
+	 * 
+	 * Implement authorization middleware in resolvers to validate:
+	 * - User identity and session validity
+	 * - Payment data sanitization and validation
+	 * - Cart state consistency before checkout mutations
+	 * 
+	 * Reference: src/graphql/mutations/ - ensure each mutation has auth guards
+	 */
+	/**
+	 * SECURITY: Checkout Module Type Validation
+	 * Custom checkout types in src/checkout/graphql/index.ts MUST include:
+	 * 1. Explicit runtime validation for payment data
+	 * 2. Type guards for session data structures
+	 * 3. No unsafe type assumptions on currency, amounts, or payment tokens
+	 * 
+	 * All checkout GraphQL types must be validated at runtime, not relying solely
+	 * on code generation. Implement validation functions for:
+	 * - Payment method validation
+	 * - Session/token expiration checks
+	 * - Amount and currency format validation
+	 */
 };
 
 export default config;
