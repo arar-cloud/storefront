@@ -51,12 +51,10 @@ function validateGraphQLUrl(url: string | undefined): string {
 	}
 }
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+let schemaUrl = validateGraphQLUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL);
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
-} else {
-	schemaUrl = validateGraphQLUrl(schemaUrl);
 }
 
 const config: CodegenConfig = {
