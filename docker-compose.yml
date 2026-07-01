@@ -1,10 +1,24 @@
 version: "3"
 
-# SECURITY NOTE: Environment variables passed to containers must be validated.
-# Ensure the following variables are set from a trusted source before running:
-# - NEXT_PUBLIC_SALEOR_API_URL: Must be a valid HTTPS URL (validated by .graphqlrc.ts)
-# - NEXT_PUBLIC_STOREFRONT_URL: Must be a valid URL (should be validated in app)
-# Do not pass unvalidated environment variables to containers.
+# SECURITY POLICY: Environment Variable Validation
+#
+# CRITICAL: All environment variables passed to containers must be validated before startup.
+# Failure to validate can allow attackers to inject malicious URLs or commands.
+#
+# Required variables (must be validated URLs):
+# - NEXT_PUBLIC_SALEOR_API_URL: GraphQL API endpoint (must be valid HTTPS URL in production)
+# - NEXT_PUBLIC_STOREFRONT_URL: Storefront public URL (must be valid URL)
+#
+# Validation is enforced by:
+# 1. src/lib/security/validate-env-url.ts - Centralized URL validation utility
+# 2. scripts/validate-docker-env.js - Pre-startup environment validation
+#
+# To validate before running: node scripts/validate-docker-env.js
+#
+# DO NOT skip validation in production. Attack surface includes:
+# - Malicious GraphQL schema injection via NEXT_PUBLIC_SALEOR_API_URL
+# - Open redirect attacks via NEXT_PUBLIC_STOREFRONT_URL
+# - Command injection through improperly escaped URLs
 
 services:
   saleor-storefront:
@@ -12,9 +26,10 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        # NEXT_PUBLIC_SALEOR_API_URL is validated by .graphqlrc.ts URL validation function
+        # SECURITY: These URLs are validated by src/lib/security/validate-env-url.ts
+        # - Schema URL is validated during codegen (.graphqlrc.ts and src/checkout/graphql/codegen.ts)
+        # - Storefront URL should be validated by scripts/validate-docker-env.js before startup
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
-        # NEXT_PUBLIC_STOREFRONT_URL should be validated to prevent malicious URLs
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
