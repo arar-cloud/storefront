@@ -46,7 +46,9 @@ const config: CodegenConfig = {
 			preset: "client",
 			plugins: [],
 			config: {
-				documentMode: "string",
+				// documentMode removed: enforce static document generation only
+		// All GraphQL queries must be statically defined in src/graphql/*.graphql files
+		// Dynamic query construction from user input is NOT permitted
 				useTypeImports: true,
 				strictScalars: true,
 				scalars: {
