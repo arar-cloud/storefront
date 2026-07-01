@@ -62,10 +62,19 @@ function validateSchemaPath(filePath: string): boolean {
   return true;
 }
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+let schemaUrl: string | null = null;
 
-if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
-	schemaUrl = "schema.graphql";
+if (process.env.GITHUB_ACTIONS === "true") {
+	if (validateGitHubActionsContext()) {
+		const schemaPath = "schema.graphql";
+		if (validateSchemaPath(schemaPath)) {
+			schemaUrl = schemaPath;
+		} else {
+			throw new Error("[Security] Invalid schema path in GitHub Actions context");
+		}
+	}
+} else {
+	schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL || null;
 }
 
 if (!schemaUrl) {
@@ -78,7 +87,7 @@ if (!schemaUrl) {
 
 const config: CodegenConfig = {
 	overwrite: true,
-	schema: schemaUrl,
+	schema: schemaUrl || { "./schema.graphql": {} },
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
 	generates: {
