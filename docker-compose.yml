@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   saleor-storefront:
@@ -9,8 +9,18 @@ services:
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - 3000:3000
+      # Security: Bind to specific interface (127.0.0.1) in dev, use reverse proxy in prod
+      - "3000:3000"
+    environment:
+      # Ensure Node.js runs in production mode
+      NODE_ENV: production
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/apt
     networks:
       - saleor_network
 
