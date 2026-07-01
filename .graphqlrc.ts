@@ -71,6 +71,17 @@ const config: CodegenConfig = {
 				// Dynamic query construction from user input is NOT permitted
 				useTypeImports: true,
 				strictScalars: true,
+				/**
+				 * SECURITY: Scalar type mapping with safe deserialization.
+				 * GenericScalar and JSON types must never deserialize arbitrary code.
+				 * - Explicitly type as Record<string, unknown> to enforce runtime validation
+				 * - Consumers must validate all fields before use
+				 * - Never eval(), Function(), or pass untrusted scalars to dynamic operations
+				 */
+				scalarsMap: {
+					GenericScalar: "Record<string, unknown>",
+					JSON: "Record<string, unknown>",
+				},
 				// SECURITY: GenericScalar and JSON scalars are typed as 'unknown' to enforce runtime validation
 				// Before using these scalars, validate structure and type at runtime to prevent arbitrary code execution
 				// Example: Use Zod, io-ts, or similar validation libraries to parse unknown scalar values
@@ -97,12 +108,7 @@ const config: CodegenConfig = {
 				fragmentMasking: false,
 			},
 		},
-		// SECURITY: Scalar validation to prevent arbitrary code execution
-		// GenericScalar and JSON types must be validated at runtime before use
-		scalars: {
-			GenericScalar: "unknown", // Map to unknown and validate before deserialization
-			JSON: "unknown", // Strict validation required for JSON scalar inputs
-		},
+
 	},
 };
 
