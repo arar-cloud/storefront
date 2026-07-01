@@ -21,7 +21,41 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+/**
+ * Validates and sanitizes GraphQL schema URL from environment variable.
+ * Ensures only valid HTTPS URLs are accepted to prevent schema injection attacks.
+ */
+function validateSchemaUrl(url: string | undefined): string {
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_SALEOR_API_URL environment variable is not set"
+    );
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    // Only allow https protocol for security
+    if (parsedUrl.protocol !== "https:") {
+      throw new Error(
+        `Invalid schema URL protocol: ${parsedUrl.protocol}. Only HTTPS is allowed.`
+      );
+    }
+    // Ensure hostname is present and not localhost/IP-only (for production)
+    if (!parsedUrl.hostname) {
+      throw new Error("Invalid schema URL: missing hostname");
+    }
+    return parsedUrl.toString();
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        `Invalid schema URL format: ${url}. Must be a valid HTTPS URL.`
+      );
+    }
+    throw error;
+  }
+}
+
+let schemaUrl = validateSchemaUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL);
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
