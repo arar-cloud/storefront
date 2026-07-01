@@ -46,9 +46,10 @@ const config: CodegenConfig = {
 			preset: "client",
 			plugins: [],
 			config: {
-				// SECURITY: Use 'documentNode' mode to prevent GraphQL query injection attacks.
-				// This ensures all queries are statically compiled and cannot be manipulated via string interpolation.
-				// If you need string mode, queries MUST be validated against a strict allow-list at runtime.
+				// SECURITY: Validate that documentMode='documentNode' prevents runtime GraphQL injection
+				// All GraphQL queries MUST be statically defined in src/graphql/*.graphql files
+				// Never construct GraphQL documents from user input or dynamic sources
+				// documentMode='documentNode' compiles queries at build time, preventing injection attacks
 				documentMode: "documentNode",
 				// All GraphQL queries must be statically defined in src/graphql/*.graphql files
 				// Dynamic query construction from user input is NOT permitted
