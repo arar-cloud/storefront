@@ -7,22 +7,31 @@ services:
       dockerfile: Dockerfile
       args:
         # SECURITY: Build args must be provided via environment or .env file
-        # Never commit secrets to docker-compose.yml
+        # Never commit secrets to docker-compose.yml or hard-code in docker-compose.yml
+        # Use .env file or container orchestration secrets management (e.g., Docker Secrets, K8s Secrets)
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
-      - 3000:3000
+      - "3000:3000"
     networks:
       - saleor_network
-    # Security hardening: restrict container privileges and filesystem
+    # SECURITY: Container privilege restrictions - enforce least-privilege model
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     read_only: true
     tmpfs:
       - /tmp
       - /var/tmp
       - /.next
+    user: "node:node"
+    # Do not expose secrets via environment - use Docker secrets or external secret management
+    # Example for Docker Secrets: secrets: [api_token]
+    # Example for env file: env_file: .env.production (never commit this file)
 
   # Add more containers below (nginx, postgres, etc.)
 
