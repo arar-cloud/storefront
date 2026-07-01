@@ -1,12 +1,20 @@
 version: "3"
 
+# SECURITY NOTE: Environment variables passed to containers must be validated.
+# Ensure the following variables are set from a trusted source before running:
+# - NEXT_PUBLIC_SALEOR_API_URL: Must be a valid HTTPS URL (validated by .graphqlrc.ts)
+# - NEXT_PUBLIC_STOREFRONT_URL: Must be a valid URL (should be validated in app)
+# Do not pass unvalidated environment variables to containers.
+
 services:
   saleor-storefront:
     container_name: saleor-storefront
     build:
       dockerfile: Dockerfile
       args:
+        # NEXT_PUBLIC_SALEOR_API_URL is validated by .graphqlrc.ts URL validation function
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
+        # NEXT_PUBLIC_STOREFRONT_URL should be validated to prevent malicious URLs
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
