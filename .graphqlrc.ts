@@ -55,13 +55,16 @@ const config: CodegenConfig = {
 				// Dynamic query construction from user input is NOT permitted
 				useTypeImports: true,
 				strictScalars: true,
+				// SECURITY: GenericScalar and JSON scalars are typed as 'unknown' to enforce runtime validation
+				// Before using these scalars, validate structure and type at runtime to prevent arbitrary code execution
+				// Example: Use Zod, io-ts, or similar validation libraries to parse unknown scalar values
 				scalars: {
 					Date: "string",
 					DateTime: "string",
 					Day: "number",
 					Decimal: "number",
-					GenericScalar: "Record<string, unknown> | string | number | boolean | null", // Restricted union for safe deserialization
-					JSON: "Record<string, unknown>", // Explicit typed object, not unknown
+					GenericScalar: "unknown", // Enforce runtime validation before deserialization
+					JSON: "unknown", // Enforce runtime validation before deserialization
 					JSONString: "string", // SECURITY: All scalar values are validated at runtime before use. Never deserialize scalars as executable code or functions
 					Metadata: "Record<string, string>",
 					Hour: "number",
