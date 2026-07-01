@@ -46,10 +46,26 @@ const config: CodegenConfig = {
 			preset: "client",
 			plugins: [],
 			config: {
-				// SECURITY: Validate that documentMode='documentNode' prevents runtime GraphQL injection
-				// All GraphQL queries MUST be statically defined in src/graphql/*.graphql files
-				// Never construct GraphQL documents from user input or dynamic sources
-				// documentMode='documentNode' compiles queries at build time, preventing injection attacks
+				/**
+				 * SECURITY: Static Query Enforcement (documentMode='documentNode')
+				 * 
+				 * CRITICAL CONSTRAINT: All GraphQL queries MUST be statically defined in src/graphql/*.graphql files.
+				 * Violations of this constraint enable GraphQL injection attacks.
+				 * 
+				 * PROHIBITED:
+				 * - Constructing GraphQL queries from user input
+				 * - Interpolating user data into query strings
+				 * - Using template literals or string concatenation for queries
+				 * - Dynamically selecting queries based on user requests
+				 * 
+				 * REQUIRED:
+				 * - Define all queries statically in .graphql files
+				 * - Use GraphQL variables for all dynamic values
+				 * - Example: pass userInput as a variable, never in the query string
+				 * 
+				 * MECHANISM: documentMode='documentNode' compiles queries at build time,
+				 * preventing runtime query injection attacks.
+				 */
 				documentMode: "documentNode",
 				// All GraphQL queries must be statically defined in src/graphql/*.graphql files
 				// Dynamic query construction from user input is NOT permitted
