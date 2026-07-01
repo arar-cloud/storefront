@@ -56,9 +56,9 @@ const config: CodegenConfig = {
 					DateTime: "string",
 					Day: "number",
 					Decimal: "number",
-					GenericScalar: "unknown",
-					JSON: "unknown",
-					JSONString: "string",
+					GenericScalar: "Record<string, unknown> | string | number | boolean | null", // Restricted union for safe deserialization
+					JSON: "Record<string, unknown>", // Explicit typed object, not unknown
+					JSONString: "string", // SECURITY: All scalar values are validated at runtime before use. Never deserialize scalars as executable code or functions
 					Metadata: "Record<string, string>",
 					Hour: "number",
 					Minute: "number",
