@@ -6,6 +6,8 @@ services:
     build:
       dockerfile: Dockerfile
       args:
+        # SECURITY: Build args must be provided via environment or .env file
+        # Never commit secrets to docker-compose.yml
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
@@ -13,6 +15,14 @@ services:
       - 3000:3000
     networks:
       - saleor_network
+    # Security hardening: restrict container privileges and filesystem
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+      - /.next
 
   # Add more containers below (nginx, postgres, etc.)
 
