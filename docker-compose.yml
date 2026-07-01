@@ -7,19 +7,10 @@ services:
       dockerfile: Dockerfile
       args:
         # SECURITY: Build args must be provided via environment or .env file
-      # no-new-privileges=true prevents escalation attacks via setuid/setgid binaries
-    security_opt:
-      - no-new-privileges:true
-    # Drop ALL Linux capabilities and selectively add only NET_BIND_SERVICE for port binding
-    # This prevents container from using dangerous capabilities (SYS_ADMIN, NET_ADMIN, etc.)
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
-    # Read-only root filesystem prevents file-based persistence of compromises
-    read_only_root_filesystem: true
-    # tmpfs for /tmp allows temporary file creation without disk persistenc  # Never commit secrets to docker-compose.yml or hard-code in docker-compose.yml
+        # Never commit secrets to docker-compose.yml or hard-code in docker-compose.yml
         # Use .env file or container orchestration secrets management (e.g., Docker Secrets, K8s Secrets)
+        # Current pattern: ${VAR_NAME} substitutes from host environment/Docker .env file
+        # This is SECURE if .env is not committed to version control
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
