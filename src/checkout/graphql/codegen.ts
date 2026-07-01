@@ -15,9 +15,24 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Security: Validate schema URL to prevent injection attacks
+const isDevelopment = process.env.NODE_ENV !== "production";
+let validatedSchemaUrl: string;
+
+try {
+	const { validateGraphQLSchemaUrl } = await import("../lib/security/validate-env-url");
+	validatedSchemaUrl = validateGraphQLSchemaUrl(schemaUrl, isDevelopment);
+} catch (error) {
+	console.error(
+		"Invalid NEXT_PUBLIC_SALEOR_API_URL:",
+		error instanceof Error ? error.message : String(error)
+	);
+	process.exit(1);
+}
+
 const config: CodegenConfig = {
 	overwrite: true,
-	schema: schemaUrl,
+	schema: validatedSchemaUrl,
 	documents: "src/checkout/graphql/**/*.graphql",
 	generates: {
 		"src/checkout/graphql/generated/index.ts": {
