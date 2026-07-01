@@ -77,6 +77,12 @@ const config: CodegenConfig = {
 				fragmentMasking: false,
 			},
 		},
+		// SECURITY: Scalar validation to prevent arbitrary code execution
+		// GenericScalar and JSON types must be validated at runtime before use
+		scalars: {
+			GenericScalar: "unknown", // Map to unknown and validate before deserialization
+			JSON: "unknown", // Strict validation required for JSON scalar inputs
+		},
 	},
 };
 
