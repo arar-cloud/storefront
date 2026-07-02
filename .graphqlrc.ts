@@ -21,7 +21,10 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
-// Validate GraphQL API URL to prevent schema poisoning
+/**
+ * Validates that the GraphQL schema URL is safe to use.
+ * Ensures the URL is a valid HTTPS endpoint to prevent schema poisoning.
+ */
 function validateGraphQLUrl(url: string | undefined): string {
 	if (!url) {
 		throw new Error(
