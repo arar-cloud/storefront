@@ -20,7 +20,11 @@
  * - Environment variables are validated on load to prevent schema injection
  * - All GraphQL schema URLs must pass format validation (HTTPS scheme, valid hostname)
  * - Schema origin is verified before code generation begins
- * - Invalid URLs will cause the configuration to fail at load time and origin validation
+ * - Invalid URLs will cause the configuration to fail at load time
+ * - Code visibility: This configuration file is part of a limited snapshot. Core application
+ *   source code (src/ directory with backend/Python logic and frontend code) is analyzed
+ *   separately. Security hardening should also include comprehensive review of API routes,
+ *   authentication middleware, input validation in server actions, and database query patterns. and origin validation
  * - Review src/ directory for additional backend/frontend security considerations
  */
 import { loadEnvConfig } from "@next/env";
