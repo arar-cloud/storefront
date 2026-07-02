@@ -70,7 +70,7 @@ function validateGraphQLSchemaUrl(url: string): string {
   }
 }
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+let schemaUrl = validateGraphQLSchemaUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL || "");
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
