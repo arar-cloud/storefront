@@ -21,6 +21,40 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+/**
+ * Validate GraphQL schema URL to prevent schema injection attacks.
+ * Ensures the URL is a valid HTTPS endpoint and follows expected patterns.
+ */
+function validateGraphQLSchemaUrl(url: string): string {
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
+  }
+
+  try {
+    const urlObj = new URL(url);
+    
+    // Enforce HTTPS for production security
+    if (urlObj.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+      throw new Error('GraphQL schema URL must use HTTPS protocol in production');
+    }
+    
+    // Validate hostname is not localhost or internal IP in production
+    if (process.env.NODE_ENV === 'production') {
+      const hostname = urlObj.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168') || hostname.startsWith('10.')) {
+        throw new Error('GraphQL schema URL cannot point to localhost or internal IPs in production');
+      }
+    }
+    
+    return url;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('GraphQL schema URL is not a valid URL format');
+    }
+    throw error;
+  }
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
@@ -33,6 +67,11 @@ if (!schemaUrl) {
 	);
 	console.error("Follow development instructions in the README.md file.");
 	process.exit(1);
+}
+
+// Validate schema URL format and origin (skip for local file schema)
+if (schemaUrl !== "schema.graphql") {
+	schemaUrl = validateGraphQLSchemaUrl(schemaUrl);
 }
 
 const config: CodegenConfig = {
