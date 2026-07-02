@@ -15,6 +15,11 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Security Notes
+ * - Environment variables are validated on load to prevent schema injection
+ * - All GraphQL schema URLs must pass format and origin validation
+ * - Review src/ directory for additional backend/frontend security considerations
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
