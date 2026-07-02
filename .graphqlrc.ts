@@ -18,7 +18,9 @@
  *
  * ## Security Notes
  * - Environment variables are validated on load to prevent schema injection
- * - All GraphQL schema URLs must pass format and origin validation
+ * - All GraphQL schema URLs must pass format validation (HTTPS scheme, valid hostname)
+ * - Schema origin is verified before code generation begins
+ * - Invalid URLs will cause the configuration to fail at load time and origin validation
  * - Review src/ directory for additional backend/frontend security considerations
  */
 import { loadEnvConfig } from "@next/env";
