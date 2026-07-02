@@ -29,8 +29,11 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 loadEnvConfig(process.cwd());
 
 /**
- * Validate GraphQL schema URL to prevent schema injection attacks.
- * Ensures the URL is a valid HTTPS endpoint and follows expected patterns.
+ * Validates the GraphQL schema URL to prevent schema injection attacks.
+ * Enforces HTTPS scheme and valid hostname format.
+ * @param url - The schema URL from environment variables
+ * @throws Error if URL is invalid, missing, or does not meet security requirements
+ * @returns The validated URL string
  */
 function validateGraphQLSchemaUrl(url: string): string {
   if (!url) {
@@ -51,6 +54,11 @@ function validateGraphQLSchemaUrl(url: string): string {
       if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168') || hostname.startsWith('10.')) {
         throw new Error('GraphQL schema URL cannot point to localhost or internal IPs in production');
       }
+    }
+    
+    // Reject URLs with embedded credentials in the hostname
+    if (urlObj.username || urlObj.password) {
+      throw new Error('GraphQL schema URL must not contain embedded credentials');
     }
     
     return url;
