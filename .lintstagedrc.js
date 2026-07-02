@@ -1,14 +1,15 @@
 // https://nextjs.org/docs/basic-features/eslint#lint-staged
 
 import path from "path";
+import shellEscape from "shell-escape";
 
 const buildEslintCommand = (filenames) => {
-	const files = filenames
+	const escapedFiles = filenames
 		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => `"${filename}"`)
+		.map((filename) => shellEscape([filename]))
 		.join(" ");
 
-	return `pnpm eslint --fix ${files}`;
+	return `pnpm eslint --fix ${escapedFiles}`;
 };
 
 const config = {
