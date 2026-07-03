@@ -17,11 +17,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 function getCspHeader(): string {
 	const cspDirectives = [
 		"default-src 'self'",
-		"script-src 'self' https://js.stripe.com https://q.stripe.com",
+		"script-src 'self' https://js.stripe.com https://q.stripe.com 'unsafe-eval'",
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' https: data:",
 		"font-src 'self' data: https:",
-		"connect-src 'self' https://api.stripe.com",
+		"connect-src 'self' https://api.stripe.com https://api.saleor.cloud",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
 		"base-uri 'self'",
