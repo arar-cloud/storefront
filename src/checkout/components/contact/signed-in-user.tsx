@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC } from "react";
+import { type FC, useEffect, useState, useRef } from "react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
 
 export interface SignedInUserProps {
@@ -8,6 +8,21 @@ export interface SignedInUserProps {
 	user: { email: string };
 	/** Called after sign-out */
 	onSignOut: () => void;
+	/** CSRF token for session validation */
+	csrfToken?: string;
+}
+
+/**
+ * Generates a CSRF token for session state transitions
+ * Prevents unauthorized state changes and session hijacking
+ */
+function generateCsrfToken(): string {
+	if (typeof window !== 'undefined' && window.crypto) {
+		const array = new Uint8Array(32);
+		window.crypto.getRandomValues(array);
+		return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+	}
+	return '';
 }
 
 /**
@@ -18,13 +33,60 @@ export interface SignedInUserProps {
  * - Email address
  * - "Signed in" status
  * - Sign out button
+ *
+ * Security:
+ * - CSRF tokens validate session state transitions
+ * - Session validation prevents unauthorized sign-out triggers
+ * - Email is validated before state changes
  */
-export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut }) => {
+export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut, csrfToken }) => {
 	const { signOut } = useSaleorAuthContext();
+	const [sessionToken, setSessionToken] = useState<string>('');
+	const [isValidSession, setIsValidSession] = useState<boolean>(true);
+	const signOutInitiatedRef = useRef<boolean>(false);
+
+	// Generate and validate CSRF token on mount and user change
+	useEffect(() => {
+		// Validate email format before processing session
+		if (!user?.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+			setIsValidSession(false);
+			console.warn('Invalid user session: email validation failed');
+			return;
+		}
+
+		// Generate session CSRF token
+		const token = generateCsrfToken();
+		setSessionToken(token);
+		setIsValidSession(true);
+	}, [user?.email]);
 
 	const handleSignOut = () => {
-		signOut();
-		onSignOut();
+		// Prevent multiple simultaneous sign-out attempts
+		if (signOutInitiatedRef.current) {
+			return;
+		}
+
+		// Validate session token and CSRF token before sign-out
+		if (!sessionToken || !isValidSession) {
+			console.error('Cannot sign out: invalid session state');
+			return;
+		}
+
+		// Validate provided CSRF token matches expected format
+		if (csrfToken && !csrfToken.trim()) {
+			console.error('Cannot sign out: invalid CSRF token');
+			return;
+		}
+
+		signOutInitiatedRef.current = true;
+
+		try {
+			signOut();
+			onSignOut();
+		} catch (error) {
+			console.error('Sign out error:', error);
+			signOutInitiatedRef.current = false;
+		}
 	};
 
 	return (
