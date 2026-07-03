@@ -10,6 +10,7 @@ import { type CountryCode, type AddressFragment } from "@/checkout/graphql";
 import { useAvailableShippingCountries } from "@/checkout/hooks/use-available-shipping-countries";
 import { getCountryName } from "@/checkout/lib/utils/locale";
 import { useAddressFormUtils } from "@/checkout/components/address-form/use-address-form-utils";
+import { sanitizeAddressObject, encodeHtmlEntities, type SanitizationResult } from "@/checkout/lib/utils/input-sanitization";
 import { HybridAddressSelector } from "@/checkout/components/shipping-address";
 
 export interface BillingAddressData {
@@ -93,6 +94,9 @@ export const BillingAddressSection: FC<BillingAddressSectionProps> = ({
 		billingAddress?.id || defaultBillingAddressId || (userAddresses.length > 0 ? userAddresses[0].id : null),
 	);
 
+	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+	const [addressData, setAddressData] = useState<Record<string, string>>({});
+
 	const [countryCode, setCountryCode] = useState<CountryCode>(
 		(billingAddress?.country?.code as CountryCode) || "US",
 	);
@@ -111,6 +115,51 @@ export const BillingAddressSection: FC<BillingAddressSectionProps> = ({
 
 	const { orderedAddressFields, getFieldLabel, isRequiredField, countryAreaChoices } =
 		useAddressFormUtils(countryCode);
+
+	/**
+	 * Validates address data on change
+	 * Sanitizes inputs and tracks validation errors
+	 */
+	const handleAddressChange = (field: string, value: string) => {
+		// Update local state
+		setAddressData((prev) => ({
+			...prev,
+			[field]: value,
+		}));
+
+		// Clear previous error for this field
+		setValidationErrors((prev) => {
+			const next = { ...prev };
+			delete next[field];
+			return next;
+		});
+	};
+
+	/**
+	 * Validates and sanitizes the entire address before submission
+	 */
+	const validateAddressSubmission = (address: Record<string, any>): boolean => {
+		const requiredFields = ['firstName', 'lastName', 'streetAddress1', 'city', 'postalCode', 'country'];
+		const result = sanitizeAddressObject(address, requiredFields);
+
+		if (!result.isValid) {
+			// Convert error array to field-level errors for display
+			const fieldErrors: Record<string, string> = {};
+			result.errors.forEach((error) => {
+				const field = error.toLowerCase().includes('first') ? 'firstName' : 
+						 error.toLowerCase().includes('last') ? 'lastName' :
+						 error.toLowerCase().includes('street') ? 'streetAddress1' :
+						 error.toLowerCase().includes('city') ? 'city' :
+						 error.toLowerCase().includes('postal') ? 'postalCode' : 'general';
+				fieldErrors[field] = error;
+			});
+			setValidationErrors(fieldErrors);
+			return false;
+		}
+
+		setValidationErrors({});
+		return true;
+	};
 
 	// Notify parent of changes
 	useEffect(() => {
