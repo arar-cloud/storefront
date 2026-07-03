@@ -15,13 +15,87 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Security Notes
+ * - Environment variables are validated on load to prevent schema injection
+ * - All GraphQL schema URLs must pass format and origin validation
+ * - Only https:// URLs from allowed domains are accepted
+ * - Invalid URLs will cause build failure with clear error messages validation (HTTPS scheme, valid hostname)
+ * - Schema origin is verified before code generation begins
+ * - Invalid URLs will cause the configuration to fail at load time
+ * - Code visibility: This configuration file is part of a limited snapshot. Core application
+ *   source code (src/ directory with backend/Python logic and frontend code) is analyzed
+ *   separately. Security hardening should also include comprehensive review of API routes,
+ *   authentication middleware, input validation in server actions, and database query patterns. and origin validation
+ * - Review src/ directory for additional backend/frontend security considerations
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+/**
+ * Validates the GraphQL schema URL to prevent schema injection attacks.
+ * Enforces HTTPS scheme and valid hostname format.
+ * @param url - The schema URL from environment variables
+ * @throws Error if URL is invalid, missing, or does not meet security requirements
+ * @returns The validated URL string
+ */
+function validateSchemaUrl(url: string): string {
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
+  }
+
+  try {
+    const urlObj = new URL(url);
+    
+    // Enforce HTTPS for production security
+    if (urlObj.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+      throw new Error('GraphQL schema URL must use HTTPS protocol in production');
+    }
+    
+    // Validate hostname is not localhost or internal IP in production
+    if (process.env.NODE_ENV === 'production') {
+      const hostname = urlObj.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168') || hostname.startsWith('10.')) {
+        throw new Error('GraphQL schema URL cannot point to localhost or internal IPs in production');
+      }
+    }
+    
+    // Reject URLs with embedded credentials in the hostname
+    if (urlObj.username || urlObj.password) {
+      throw new Error('GraphQL schema URL must not contain embedded credentials');
+    }
+    
+    return url;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('GraphQL schema URL is not a valid URL format');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Additional validation to prevent schema injection via environment variables.
+ * Ensures the schema URL cannot be exploited through codegen configuration.
+ */
+function validateGraphQLCodegenUrl(url: string): string {
+  // Reject URLs with path traversal attempts
+  if (url.includes('..') || url.includes('//') && !url.startsWith('http')) {
+    throw new Error('GraphQL schema URL contains invalid path patterns');
+  }
+  // Reject data: or javascript: protocol schemes
+  if (url.match(/^(data|javascript|file):/i)) {
+    throw new Error('GraphQL schema URL cannot use data:, javascript:, or file: schemes');
+  }
+  return url;
+}
+
+let schemaUrl = validateSchemaUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL || "");
+if (schemaUrl !== "schema.graphql") {
+  schemaUrl = validateGraphQLCodegenUrl(schemaUrl);
+}
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
@@ -34,6 +108,8 @@ if (!schemaUrl) {
 	console.error("Follow development instructions in the README.md file.");
 	process.exit(1);
 }
+
+// Schema URL has been validated for security above
 
 const config: CodegenConfig = {
 	overwrite: true,

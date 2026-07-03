@@ -77,9 +77,19 @@ function getClientIP(request: NextRequest): string {
 function verifyWebhookSignature(payload: string, signature: string | null): boolean {
 	if (!WEBHOOK_SECRET || !signature) return false;
 
+	// Validate signature format (base64 encoded)
+	if (!/^[A-Za-z0-9+/]+={0,2}$/.test(signature)) {
+		return false;
+	}
+
+	// Validate payload is not empty
+	if (!payload || payload.length === 0) {
+		return false;
+	}
+
 	const hmac = createHmac("sha256", WEBHOOK_SECRET);
 	hmac.update(payload);
-	const expectedSignature = hmac.digest("hex");
+	const expectedSignature = hmac.digest("base64");
 
 	try {
 		return timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
@@ -189,7 +199,17 @@ export async function POST(request: NextRequest) {
 	}
 
 	try {
-		const payload = JSON.parse(rawBody);
+		let payload;
+		try {
+			payload = JSON.parse(rawBody);
+		} catch {
+			return Response.json({ error: "Invalid JSON payload" }, { status: 400 });
+		}
+
+		// Validate webhook payload structure
+		if (!payload || typeof payload !== "object") {
+			return Response.json({ error: "Invalid webhook payload" }, { status: 400 });
+		}
 
 		// Debug: Log raw payload to understand webhook structure
 		console.log("[Revalidate] Raw payload:", JSON.stringify(payload, null, 2));
