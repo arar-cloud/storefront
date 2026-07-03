@@ -5,8 +5,19 @@ import shellEscape from "shell-escape";
 
 /**
  * Safely builds eslint command with proper shell escaping of filenames.
- * Uses shell-escape library to prevent command injection attacks.
- * All filenames are converted to relative paths and individually escaped.
+ * 
+ * SECURITY: This function prevents command injection attacks by:
+ * 1. Using shell-escape library to escape each filename individually
+ * 2. Validating all input filenames are non-empty strings
+ * 3. Filtering out invalid entries before shell command construction
+ * 4. Converting to relative paths to prevent path traversal attacks
+ * 
+ * The shell-escape library handles all shell metacharacters including:
+ * - Single/double quotes
+ * - Backticks (prevents command substitution)
+ * - Dollar signs (prevents variable expansion)
+ * - Semicolons and pipes (prevents command chaining)
+ * 
  * @param {string[]} filenames - Array of file paths to lint
  * @returns {string} Safe shell command with escaped filenames
  */
