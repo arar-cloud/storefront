@@ -37,6 +37,14 @@ const buildEslintCommand = (filenames) => {
 		if (filename.includes("\0")) {
 			return false;
 		}
+		// Prevent directory traversal attacks
+		if (filename === "." || filename === "..") {
+			return false;
+		}
+		// Prevent absolute paths outside cwd
+		if (filename.startsWith("/")) {
+			return false;
+		}
 		return true;
 	});
 
