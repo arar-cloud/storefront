@@ -41,7 +41,7 @@ loadEnvConfig(process.cwd());
  * @throws Error if URL is invalid, missing, or does not meet security requirements
  * @returns The validated URL string
  */
-function validateGraphQLSchemaUrl(url: string): string {
+function validateSchemaUrl(url: string): string {
   if (!url) {
     throw new Error('NEXT_PUBLIC_SALEOR_API_URL environment variable is not set');
   }
@@ -76,7 +76,7 @@ function validateGraphQLSchemaUrl(url: string): string {
   }
 }
 
-let schemaUrl = validateGraphQLSchemaUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL || "");
+let schemaUrl = validateSchemaUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL || "");
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
@@ -93,7 +93,7 @@ if (!schemaUrl) {
 // Validate schema URL format and origin (skip for local file schema)
 if (schemaUrl !== "schema.graphql") {
 	// URL validation already performed above, but re-validate to ensure integrity
-	schemaUrl = validateGraphQLSchemaUrl(schemaUrl);
+	schemaUrl = validateSchemaUrl(schemaUrl);
 }
 
 const config: CodegenConfig = {
