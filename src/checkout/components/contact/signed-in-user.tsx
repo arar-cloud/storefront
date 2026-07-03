@@ -2,6 +2,7 @@
 
 import { type FC, useEffect, useState, useRef } from "react";
 import { useSaleorAuthContext } from "@saleor/auth-sdk/react";
+import { sanitizeEmail, encodeHtmlEntities, validateCsrfToken } from "@/checkout/lib/utils/input-sanitization";
 
 export interface SignedInUserProps {
 	/** User email or basic info */
@@ -72,9 +73,9 @@ export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut, csrfToken
 			return;
 		}
 
-		// Validate provided CSRF token matches expected format
-		if (csrfToken && !csrfToken.trim()) {
-			console.error('Cannot sign out: invalid CSRF token');
+		// Validate provided CSRF token matches expected format (if provided)
+		if (csrfToken && !validateCsrfToken(csrfToken)) {
+			console.error('Cannot sign out: invalid CSRF token format');
 			return;
 		}
 
@@ -89,14 +90,17 @@ export const SignedInUser: FC<SignedInUserProps> = ({ user, onSignOut, csrfToken
 		}
 	};
 
+	// Encode email for safe HTML output
+	const encodedEmail = user?.email ? encodeHtmlEntities(user.email) : '';
+
 	return (
 		<div className="bg-muted/30 flex items-center justify-between gap-3 rounded-lg border border-border p-4">
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-					{user.email.charAt(0).toUpperCase()}
+					{(user.email.charAt(0) || '').toUpperCase()}
 				</div>
 				<div className="min-w-0 flex-1">
-					<p className="break-words font-medium">{user.email}</p>
+					<p className="break-words font-medium" title={user.email}>{encodedEmail}</p>
 					<p className="text-sm text-muted-foreground">Signed in</p>
 				</div>
 			</div>
