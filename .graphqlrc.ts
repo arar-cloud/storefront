@@ -92,6 +92,7 @@ if (!schemaUrl) {
 
 // Validate schema URL format and origin (skip for local file schema)
 if (schemaUrl !== "schema.graphql") {
+	// URL validation already performed above, but re-validate to ensure integrity
 	schemaUrl = validateGraphQLSchemaUrl(schemaUrl);
 }
 
