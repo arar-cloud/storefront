@@ -18,7 +18,9 @@
  *
  * ## Security Notes
  * - Environment variables are validated on load to prevent schema injection
- * - All GraphQL schema URLs must pass format validation (HTTPS scheme, valid hostname)
+ * - All GraphQL schema URLs must pass format and origin validation
+ * - Only https:// URLs from allowed domains are accepted
+ * - Invalid URLs will cause build failure with clear error messages validation (HTTPS scheme, valid hostname)
  * - Schema origin is verified before code generation begins
  * - Invalid URLs will cause the configuration to fail at load time
  * - Code visibility: This configuration file is part of a limited snapshot. Core application
