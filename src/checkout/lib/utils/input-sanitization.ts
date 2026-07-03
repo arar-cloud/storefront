@@ -220,6 +220,73 @@ export function encodeHtmlEntities(text: string): string {
 }
 
 /**
+ * Generates a cryptographically secure CSRF token
+ * Returns a random 32-byte token encoded as hex string
+ */
+export function generateCsrfToken(): string {
+  const array = new Uint8Array(32);
+  if (typeof window !== 'undefined' && window.crypto) {
+    window.crypto.getRandomValues(array);
+  }
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Validates a CSRF token against stored token
+ * Comparison is constant-time to prevent timing attacks
+ */
+export function validateCsrfToken(token: string, storedToken: string): boolean {
+  if (!token || !storedToken) return false;
+  if (token.length !== storedToken.length) return false;
+  
+  let result = 0;
+  for (let i = 0; i < token.length; i++) {
+    result |= token.charCodeAt(i) ^ storedToken.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Stores CSRF token in session storage with expiration metadata
+ */
+export function storeCsrfToken(token: string, expiryMinutes: number = 60): void {
+  if (typeof window === 'undefined' || !window.sessionStorage) return;
+  
+  const expiryTime = Date.now() + (expiryMinutes * 60 * 1000);
+  window.sessionStorage.setItem('csrf_token', token);
+  window.sessionStorage.setItem('csrf_token_expiry', expiryTime.toString());
+}
+
+/**
+ * Retrieves and validates CSRF token from session storage
+ * Returns null if token is missing or expired
+ */
+export function retrieveCsrfToken(): string | null {
+  if (typeof window === 'undefined' || !window.sessionStorage) return null;
+  
+  const token = window.sessionStorage.getItem('csrf_token');
+  const expiry = window.sessionStorage.getItem('csrf_token_expiry');
+  
+  if (!token || !expiry) return null;
+  if (Date.now() > parseInt(expiry, 10)) {
+    window.sessionStorage.removeItem('csrf_token');
+    window.sessionStorage.removeItem('csrf_token_expiry');
+    return null;
+  }
+  
+  return token;
+}
+
+/**
+ * Clears CSRF token from session storage
+ */
+export function clearCsrfToken(): void {
+  if (typeof window === 'undefined' || !window.sessionStorage) return;
+  window.sessionStorage.removeItem('csrf_token');
+  window.sessionStorage.removeItem('csrf_token_expiry');
+}
+
+/**
  * Validates an object containing multiple address fields
  * Returns sanitized object and combined error list
  */
