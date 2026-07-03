@@ -76,7 +76,26 @@ function validateSchemaUrl(url: string): string {
   }
 }
 
+/**
+ * Additional validation to prevent schema injection via environment variables.
+ * Ensures the schema URL cannot be exploited through codegen configuration.
+ */
+function validateGraphQLCodegenUrl(url: string): string {
+  // Reject URLs with path traversal attempts
+  if (url.includes('..') || url.includes('//') && !url.startsWith('http')) {
+    throw new Error('GraphQL schema URL contains invalid path patterns');
+  }
+  // Reject data: or javascript: protocol schemes
+  if (url.match(/^(data|javascript|file):/i)) {
+    throw new Error('GraphQL schema URL cannot use data:, javascript:, or file: schemes');
+  }
+  return url;
+}
+
 let schemaUrl = validateSchemaUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL || "");
+if (schemaUrl !== "schema.graphql") {
+  schemaUrl = validateGraphQLCodegenUrl(schemaUrl);
+}
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
@@ -90,11 +109,7 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
-// Validate schema URL format and origin (skip for local file schema)
-if (schemaUrl !== "schema.graphql") {
-	// URL validation already performed above, but re-validate to ensure integrity
-	schemaUrl = validateSchemaUrl(schemaUrl);
-}
+// Schema URL has been validated for security above
 
 const config: CodegenConfig = {
 	overwrite: true,
