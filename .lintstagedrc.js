@@ -29,9 +29,11 @@ const buildEslintCommand = (filenames) => {
 	}
 
 	// Convert to relative paths and escape for shell safety
+	// Each filename is individually escaped using shell-escape to prevent command injection
+	// shell-escape properly handles all special characters: quotes, backticks, $, etc.
 	const escapedFiles = validatedFiles
 		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => shellEscape([filename])) // shell-escape properly handles quotes, backticks, etc.
+		.map((filename) => shellEscape([filename]))
 		.join(" ");
 
 	return `pnpm eslint --fix ${escapedFiles}`;
