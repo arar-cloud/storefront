@@ -8,9 +8,10 @@ import shellEscape from "shell-escape";
  * 
  * SECURITY: This function prevents command injection attacks by:
  * 1. Using shell-escape library to escape each filename individually
- * 2. Validating all input filenames are non-empty strings
+ * 2. Validating all input filenames are non-empty strings and contain no null bytes
  * 3. Filtering out invalid entries before shell command construction
  * 4. Converting to relative paths to prevent path traversal attacks
+ * 5. Escaping filenames as array elements passed to shell-escape, not as strings
  * 
  * The shell-escape library handles all shell metacharacters including:
  * - Single/double quotes
@@ -32,6 +33,10 @@ const buildEslintCommand = (filenames) => {
 		if (typeof filename !== "string" || filename.length === 0) {
 			return false;
 		}
+		// Check for null bytes which could truncate paths in some contexts
+		if (filename.includes("\0")) {
+			return false;
+		}
 		return true;
 	});
 
@@ -42,6 +47,7 @@ const buildEslintCommand = (filenames) => {
 	// Convert to relative paths and escape for shell safety
 	// Each filename is individually escaped using shell-escape to prevent command injection
 	// shell-escape properly handles all special characters: quotes, backticks, $, etc.
+	// Passing filenames as an array to shellEscape() treats each as a separate argument
 	const escapedFiles = validatedFiles
 		.map((filename) => path.relative(process.cwd(), filename))
 		.map((filename) => shellEscape([filename]))
