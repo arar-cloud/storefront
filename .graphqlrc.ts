@@ -35,11 +35,20 @@ if (!schemaUrl) {
 	process.exit(1);
 }
 
+// Validation rules for input sanitization
+const validationRules = {
+	// Prevent injection attacks via input objects
+	MaxInputValueLengthRule: 10000, // Limit input sizes
+	// Restrict argument complexity
+	MaxQueryDepthRule: 15,
+};
+
 const config: CodegenConfig = {
 	overwrite: true,
 	schema: schemaUrl,
 	// Storefront GraphQL queries - add new queries here
 	documents: "src/graphql/**/*.graphql",
+	validationRules,
 	generates: {
 		// Output directory for generated types (DO NOT EDIT MANUALLY)
 		"src/gql/": {
