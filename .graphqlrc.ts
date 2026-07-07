@@ -59,6 +59,11 @@ const config: CodegenConfig = {
 				maxQueryDepth: 15,
 				// Enforce operation complexity limits to mitigate expensive query attacks
 				maxOperationComplexity: 1000,
+				// Sanitize error messages to prevent schema exposure
+				errorSanitization: {
+					maskErrorDetails: true,
+					hideFieldSuggestions: true,
+				},
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
