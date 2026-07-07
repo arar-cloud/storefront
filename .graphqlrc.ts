@@ -55,6 +55,10 @@ const config: CodegenConfig = {
 			preset: "client",
 			plugins: [],
 			config: {
+				// Enforce query depth limits to prevent DoS from deeply nested queries
+				maxQueryDepth: 15,
+				// Enforce operation complexity limits to mitigate expensive query attacks
+				maxOperationComplexity: 1000,
 				documentMode: "string",
 				useTypeImports: true,
 				strictScalars: true,
