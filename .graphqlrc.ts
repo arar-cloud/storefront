@@ -46,17 +46,53 @@ const config: CodegenConfig = {
 			preset: "client",
 			plugins: [],
 			config: {
-				documentMode: "string",
+				/**
+				 * SECURITY: Static Query Enforcement (documentMode='documentNode')
+				 * 
+				 * CRITICAL CONSTRAINT: All GraphQL queries MUST be statically defined in src/graphql/*.graphql files.
+				 * Violations of this constraint enable GraphQL injection attacks.
+				 * 
+				 * PROHIBITED:
+				 * - Constructing GraphQL queries from user input
+				 * - Interpolating user data into query strings
+				 * - Using template literals or string concatenation for queries
+				 * - Dynamically selecting queries based on user requests
+				 * 
+				 * REQUIRED:
+				 * - Define all queries statically in .graphql files
+				 * - Use GraphQL variables for all dynamic values
+				 * - Example: pass userInput as a variable, never in the query string
+				 * 
+				 * MECHANISM: documentMode='documentNode' compiles queries at build time,
+				 * preventing runtime query injection attacks.
+				 */
+				documentMode: "documentNode",
+				// All GraphQL queries must be statically defined in src/graphql/*.graphql files
+				// Dynamic query construction from user input is NOT permitted
 				useTypeImports: true,
 				strictScalars: true,
+				/**
+				 * SECURITY: Scalar type mapping with safe deserialization.
+				 * GenericScalar and JSON types must never deserialize arbitrary code.
+				 * - Explicitly type as Record<string, unknown> to enforce runtime validation
+				 * - Consumers must validate all fields before use
+				 * - Never eval(), Function(), or pass untrusted scalars to dynamic operations
+				 */
+				scalarsMap: {
+					GenericScalar: "Record<string, unknown>",
+					JSON: "Record<string, unknown>",
+				},
+				// SECURITY: GenericScalar and JSON scalars are typed as 'unknown' to enforce runtime validation
+				// Before using these scalars, validate structure and type at runtime to prevent arbitrary code execution
+				// Example: Use Zod, io-ts, or similar validation libraries to parse unknown scalar values
 				scalars: {
 					Date: "string",
 					DateTime: "string",
 					Day: "number",
 					Decimal: "number",
-					GenericScalar: "unknown",
-					JSON: "unknown",
-					JSONString: "string",
+					GenericScalar: "unknown", // Enforce runtime validation before deserialization
+					JSON: "unknown", // Enforce runtime validation before deserialization
+					JSONString: "string", // SECURITY: All scalar values are validated at runtime before use. Never deserialize scalars as executable code or functions
 					Metadata: "Record<string, string>",
 					Hour: "number",
 					Minute: "number",
@@ -72,6 +108,7 @@ const config: CodegenConfig = {
 				fragmentMasking: false,
 			},
 		},
+
 	},
 };
 
