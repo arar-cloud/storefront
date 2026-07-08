@@ -21,18 +21,43 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+/**
+ * Validates that the GraphQL schema URL is safe to use.
+ * Ensures the URL is a valid HTTPS endpoint to prevent schema poisoning.
+ */
+function validateGraphQLUrl(url: string | undefined): string {
+	if (!url) {
+		throw new Error(
+			"NEXT_PUBLIC_SALEOR_API_URL environment variable is not set. " +
+			"Please configure it in your .env.local or environment variables.",
+		);
+	}
+
+	try {
+		const parsedUrl = new URL(url);
+
+		// Enforce HTTPS for production, allow HTTP only for localhost/development
+		if (parsedUrl.protocol !== "https:" && !parsedUrl.hostname.includes("localhost") && parsedUrl.hostname !== "127.0.0.1") {
+			throw new Error(
+				`GraphQL API URL must use HTTPS protocol for security. Received: ${parsedUrl.protocol}//${parsedUrl.hostname}`,
+			);
+		}
+
+		return url;
+	} catch (error) {
+		if (error instanceof TypeError) {
+			throw new Error(
+				`Invalid GraphQL API URL format: ${url}. Expected a valid URL (e.g., https://api.saleor.cloud/graphql/)`,
+			);
+		}
+		throw error;
+	}
+}
+
+let schemaUrl = validateGraphQLUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL);
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
-}
-
-if (!schemaUrl) {
-	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
-	);
-	console.error("Follow development instructions in the README.md file.");
-	process.exit(1);
 }
 
 const config: CodegenConfig = {
