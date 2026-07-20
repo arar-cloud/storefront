@@ -66,10 +66,21 @@ if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 
 if (!schemaUrl) {
 	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
+		"[GraphQL CodeGen] NEXT_PUBLIC_SALEOR_API_URL environment variable is not defined",
 	);
-	console.error("Follow development instructions in the README.md file.");
+	console.error("Set NEXT_PUBLIC_SALEOR_API_URL to a valid HTTPS URL before running code generation.");
 	process.exit(1);
+}
+
+// Validate the schema URL format and safety (skip for file-based schema generation)
+if (process.env.GITHUB_ACTION !== "generate-schema-from-file") {
+	const validation = validateSchemaUrl(schemaUrl);
+	if (!validation.valid) {
+		console.error(`[GraphQL CodeGen] Invalid schema URL: ${validation.error}`);
+		console.error(`Received: ${schemaUrl}`);
+		console.error("Please ensure NEXT_PUBLIC_SALEOR_API_URL is a valid HTTPS URL.");
+		process.exit(1);
+	}
 }
 
 const config: CodegenConfig = {
