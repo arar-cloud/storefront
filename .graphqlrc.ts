@@ -21,6 +21,43 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 loadEnvConfig(process.cwd());
 
+/**
+ * Validates that a schema URL is a valid HTTPS/HTTP URL and not a file path.
+ * Prevents SSRF, path traversal, and injection attacks.
+ */
+function validateSchemaUrl(url: string): { valid: boolean; error?: string } {
+	if (!url) {
+		return { valid: false, error: "Schema URL is empty" };
+	}
+
+	try {
+		const parsed = new URL(url);
+
+		// Only allow HTTPS (production) or HTTP (development/testing)
+		if (!['https:', 'http:'].includes(parsed.protocol)) {
+			return { valid: false, error: `Invalid protocol: ${parsed.protocol}. Only http/https allowed.` };
+		}
+
+		// Reject suspicious patterns that could indicate file paths or traversal attempts
+		if (url.includes('..') || url.includes('~') || url.startsWith('file://')) {
+			return { valid: false, error: 'URL contains suspicious path traversal or file path patterns' };
+		}
+
+		// Check that hostname is not localhost or private IP ranges (in production)
+		const hostname = parsed.hostname;
+		if (parsed.protocol === 'https:') {
+			const privateRanges = ['127.0.0.1', 'localhost', '192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.'];
+			if (privateRanges.some(range => hostname === range || hostname.startsWith(range))) {
+				return { valid: false, error: 'Production HTTPS URLs cannot point to private/localhost addresses' };
+			}
+		}
+
+		return { valid: true };
+	} catch (err) {
+		return { valid: false, error: `Invalid URL format: ${err instanceof Error ? err.message : 'unknown error'}` };
+	}
+}
+
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
@@ -29,10 +66,21 @@ if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 
 if (!schemaUrl) {
 	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
+		"[GraphQL CodeGen] NEXT_PUBLIC_SALEOR_API_URL environment variable is not defined",
 	);
-	console.error("Follow development instructions in the README.md file.");
+	console.error("Set NEXT_PUBLIC_SALEOR_API_URL to a valid HTTPS URL before running code generation.");
 	process.exit(1);
+}
+
+// Validate the schema URL format and safety (skip for file-based schema generation)
+if (process.env.GITHUB_ACTION !== "generate-schema-from-file") {
+	const validation = validateSchemaUrl(schemaUrl);
+	if (!validation.valid) {
+		console.error(`[GraphQL CodeGen] Invalid schema URL: ${validation.error}`);
+		console.error(`Received: ${schemaUrl}`);
+		console.error("Please ensure NEXT_PUBLIC_SALEOR_API_URL is a valid HTTPS URL.");
+		process.exit(1);
+	}
 }
 
 const config: CodegenConfig = {
