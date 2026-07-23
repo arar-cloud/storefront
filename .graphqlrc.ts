@@ -18,8 +18,45 @@
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import { URL } from "url";
 
 loadEnvConfig(process.cwd());
+
+/**
+ * Validates and parses the Saleor API URL from environment.
+ * Prevents schema poisoning via malicious NEXT_PUBLIC_SALEOR_API_URL.
+ */
+function validateSaleorApiUrl(urlString: string | undefined): string {
+	if (!urlString) {
+		throw new Error(
+			"NEXT_PUBLIC_SALEOR_API_URL environment variable is required but not set"
+		);
+	}
+
+	try {
+		const parsedUrl = new URL(urlString);
+		// Enforce HTTPS in production
+		if (process.env.NODE_ENV === "production" && parsedUrl.protocol !== "https:") {
+			throw new Error("NEXT_PUBLIC_SALEOR_API_URL must use HTTPS protocol in production");
+		}
+		// Validate hostname is not localhost or internal IP in production
+		if (
+			process.env.NODE_ENV === "production" &&
+			/^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)/.test(parsedUrl.hostname)
+		) {
+			throw new Error(
+				"NEXT_PUBLIC_SALEOR_API_URL must not point to localhost/internal IP in production"
+			);
+		}
+		return parsedUrl.toString();
+	} catch (error) {
+		throw new Error(
+			`Invalid NEXT_PUBLIC_SALEOR_API_URL: ${error instanceof Error ? error.message : String(error)}`
+		);
+	}
+}
+
+const saleorApiUrl = validateSaleorApiUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL);
 
 let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
 
