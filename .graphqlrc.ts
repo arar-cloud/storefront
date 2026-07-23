@@ -72,10 +72,12 @@ if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
 }
 
-if (!schemaUrl) {
+// Additional validation: ensure schema URL is set and secure
+if (!schemaUrl || typeof schemaUrl !== "string") {
 	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
+		"Schema URL validation failed: schemaUrl must be a non-empty string.",
 	);
+	console.error("Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.");
 	console.error("Follow development instructions in the README.md file.");
 	process.exit(1);
 }
