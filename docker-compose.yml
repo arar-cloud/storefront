@@ -1,14 +1,30 @@
-version: "3"
+version: "3.9"
 
-# SECURITY: Store sensitive environment variables in .env or .env.local, not inline.
-# Example .env:
+# ============================================================================
+# SECURITY HARDENING REQUIREMENTS
+# ============================================================================
+#
+# CREDENTIAL MANAGEMENT (CRITICAL)
+# ✓ All sensitive values MUST be sourced from environment variables, not hardcoded
+# ✓ Use .env file (never commit to version control)
+# ✓ For production: use Docker Secrets or external secrets manager (HashiCorp Vault, AWS Secrets Manager)
+# ✓ Use .env.example as template without actual values
+#
+# Example .env (never commit this):
 #   NEXT_PUBLIC_SALEOR_API_URL=https://api.saleor.example.com
 #   NEXT_PUBLIC_STOREFRONT_URL=https://storefront.example.com
-#   DATABASE_PASSWORD=<secure-password>
-#   API_SECRET_KEY=<secret-key>
+#   DATABASE_PASSWORD=<secure-password-do-not-commit>
+#   API_SECRET_KEY=<secret-key-do-not-commit>
+#   SALEOR_GRAPHQL_SECRET=<token-for-api-auth>
 #
-# Never commit .env files or secrets to version control.
-# Use Docker secrets or external secrets management for production.
+# Secrets Configuration (Production):
+#   Use docker secrets or external secret management instead of .env
+#   Example with Docker Secrets:
+#     secrets:
+#       saleor_api_url:
+#         external: true
+#       saleor_secret:
+#         external: true
 
 services:
   saleor-storefront:
