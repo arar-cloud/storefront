@@ -29,12 +29,22 @@ version: "3.9"
 services:
   saleor-storefront:
     container_name: saleor-storefront
+    environment:
+      # NOTE: These variables are validated at build time in .graphqlrc.ts
+      # NEXT_PUBLIC_* variables are embedded in the build and visible to client
+      # - NEXT_PUBLIC_SALEOR_API_URL: Must be HTTPS URL, validated in .graphqlrc.ts
+      # - NEXT_PUBLIC_STOREFRONT_URL: Must be HTTPS URL for production
+      # DO NOT use these env vars for sensitive credentials (they are public)
+      NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL:?Error: NEXT_PUBLIC_SALEOR_API_URL not set}
+      NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL:?Error: NEXT_PUBLIC_STOREFRONT_URL not set}
+      # Private variables (not exposed to client)
+      NODE_ENV: ${NODE_ENV:-development}
     build:
       dockerfile: Dockerfile
       args:
-        # WARNING: Ensure NEXT_PUBLIC_SALEOR_API_URL is validated (see .graphqlrc.ts)
-        NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
-        NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
+        # These are passed to the build process only
+        NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL:?Error: NEXT_PUBLIC_SALEOR_API_URL not set}
+        NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL:?Error: NEXT_PUBLIC_STOREFRONT_URL not set}
     restart: always
     ports:
       - 3000:3000
