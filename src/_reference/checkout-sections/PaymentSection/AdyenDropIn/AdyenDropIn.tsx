@@ -2,6 +2,22 @@ import AdyenCheckout from "@adyen/adyen-web";
 import { type FC, useCallback, useEffect, useRef } from "react";
 import { z } from "zod";
 
+/**
+ * Sanitize error message to prevent XSS attacks
+ * Removes any HTML tags and script content from error messages
+ */
+function sanitizeErrorMessage(message: string): string {
+  if (typeof message !== 'string') {
+    return 'An error occurred';
+  }
+  // Remove HTML tags and dangerous content
+  return message
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .slice(0, 255); // Limit length to prevent DoS via long strings
+}
+
 import { createAdyenCheckoutConfig } from "@/checkout/sections/PaymentSection/AdyenDropIn/utils";
 import {
 	type AdyenDropinProps,
@@ -59,5 +75,7 @@ export const AdyenDropIn: FC<AdyenDropinProps> = ({ config }) => {
 		}
 	}, []);
 
-	return <div ref={dropinContainerElRef} />;
+	return (
+		<div ref={dropinContainerElRef} />
+	);
 };
