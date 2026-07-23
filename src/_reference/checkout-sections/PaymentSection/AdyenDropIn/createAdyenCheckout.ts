@@ -99,10 +99,24 @@ export function createAdyenCheckoutInstance(
 		throw new Error('[SECURITY] Invalid Adyen configuration parameters');
 	}
 
-	return AdyenCheckout({
-		locale: localeConfig.default,
-		environment: "test",
+	// SECURITY: Validate all SDK configuration before initialization
+	const sdkConfig = {
 		clientKey: adyenSessionResponse.clientKey,
+		environment: 'test',
+		locale: localeConfig.default || 'en_US',
+	} as const;
+
+	// Verify all config values are strings and properly formed
+	Object.entries(sdkConfig).forEach(([key, value]) => {
+		if (typeof value !== 'string' || value.length === 0) {
+			throw new Error(`[SECURITY] Invalid SDK configuration: ${key} must be non-empty string`);
+		}
+	});
+
+	return AdyenCheckout({
+		locale: sdkConfig.locale,
+		environment: sdkConfig.environment,
+		clientKey: sdkConfig.clientKey,
 		session: {
 			id: adyenSessionResponse.session.id,
 			sessionData: adyenSessionResponse.session.sessionData,
