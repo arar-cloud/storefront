@@ -1,11 +1,22 @@
+/**
+ * Client-facing error messages for payment failures
+ * 
+ * SECURITY: These messages are exposed to the client and should NOT contain:
+ * - Specific gateway details (acquirer names, processor info)
+ * - Internal transaction IDs
+ * - System configuration details
+ * - Payment method specifics beyond what user already knows
+ * 
+ * Sensitive error details are logged server-side only.
+ */
 export const adyenErrorMessages = {
 	refused: "The transaction was refused.",
-	acquirerError: "The transaction did not go through due to an error that occurred on the acquirer's end.",
+	acquirerError: "The transaction could not be processed. Please try again or contact support.",
 	blockedCard: "The card used for the transaction is blocked, therefore unusable.",
 	expiredCard: "The card used for the transaction has expired. Therefore it is unusable.",
 	invalidAmount: "An amount mismatch occurred during the transaction process.",
 	invalidCardNumber: "The specified card number is incorrect or invalid.",
-	issuerUnavailable: "It is not possible to contact the shopper's bank to authorise the transaction.",
+	issuerUnavailable: "We cannot reach your bank at the moment. Please try again later.",
 	notSupported: "The shopper's bank does not support or does not allow this type of transaction.",
 	"3DNotAuthenticated": "3D Secure authentication was not executed, or it did not execute successfully.",
 	notEnoughBalance: "The card does not have enough money to cover the payable amount.",
