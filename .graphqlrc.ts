@@ -17,12 +17,31 @@
  * - Always run `pnpm run generate` after changing GraphQL queries
  *
  * ## Security Guidelines
- * - INPUT VALIDATION: All query variables must be validated before passing to the API.
- *   Use schema validation libraries (Zod, Yup) for user-supplied filters, IDs, search terms.
- * - XSS PREVENTION: User-controlled data from GraphQL responses must be properly escaped
- *   when rendered. React auto-escapes by default, but sanitize HTML content with DOMPurify.
- * - AUTH/SESSION: Verify user session validity before executing authenticated mutations.
- *   Check permissions and rate limit sensitive operations.
+ *
+ * ### INPUT VALIDATION (HIGH PRIORITY)
+ * All query variables must be validated before passing to the API:
+ * 1. Define explicit validation schemas for every GraphQL operation using zod or joi
+ * 2. Example:
+ *    ```ts
+ *    const ProductFilterSchema = z.object({
+ *      query: z.string().max(255).regex(/^[a-zA-Z0-9\s-]*$/, 'Invalid'),
+ *      categoryId: z.string().uuid('Invalid UUID'),
+ *      minPrice: z.number().min(0),
+ *    });
+ *    const validatedInput = ProductFilterSchema.parse(userInput);
+ *    ```
+ * 3. Validate: string length, UUID format, numeric ranges, enum values, array lengths
+ *
+ * ### MUTATION PARAMETER SAFETY
+ * All mutations must validate input parameters against expected schemas before execution.
+ *
+ * ### XSS PREVENTION
+ * User-controlled data from GraphQL responses must be properly escaped when rendered.
+ * React auto-escapes by default; sanitize HTML content with DOMPurify or allow-list patterns.
+ *
+ * ### AUTH/SESSION HARDENING
+ * Verify user session validity before executing authenticated mutations.
+ * Check permissions and rate limit sensitive operations.
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
