@@ -1,16 +1,30 @@
 version: "3"
 
+# SECURITY: Store sensitive environment variables in .env or .env.local, not inline.
+# Example .env:
+#   NEXT_PUBLIC_SALEOR_API_URL=https://api.saleor.example.com
+#   NEXT_PUBLIC_STOREFRONT_URL=https://storefront.example.com
+#   DATABASE_PASSWORD=<secure-password>
+#   API_SECRET_KEY=<secret-key>
+#
+# Never commit .env files or secrets to version control.
+# Use Docker secrets or external secrets management for production.
+
 services:
   saleor-storefront:
     container_name: saleor-storefront
     build:
       dockerfile: Dockerfile
       args:
+        # WARNING: Ensure NEXT_PUBLIC_SALEOR_API_URL is validated (see .graphqlrc.ts)
         NEXT_PUBLIC_SALEOR_API_URL: ${NEXT_PUBLIC_SALEOR_API_URL}
         NEXT_PUBLIC_STOREFRONT_URL: ${NEXT_PUBLIC_STOREFRONT_URL}
     restart: always
     ports:
       - 3000:3000
+    # SECURITY: Use external secrets for production instead of environment variables
+    # secrets:
+    #   - api_secret_key
     networks:
       - saleor_network
 
@@ -19,3 +33,8 @@ services:
 networks:
   saleor_network:
     external: false
+
+# SECURITY: Define secrets for production use (requires Docker Swarm or Compose v3.9+)
+# secrets:
+#   api_secret_key:
+#     external: true
