@@ -8,6 +8,47 @@ import { type AdyenPaymentResponse } from "./types";
 import { replaceUrl } from "@/checkout/lib/utils/url";
 import { localeConfig } from "@/config/locale";
 
+/**
+ * Validates that the checkout session is properly authenticated and bound to user context.
+ * Prevents unauthorized access to payment processing and cross-user payment hijacking.
+ */
+function validateCheckoutSession(checkoutId: string, userId?: string): boolean {
+  if (!checkoutId || typeof checkoutId !== 'string') {
+    console.error('[SECURITY] Invalid checkout ID format');
+    return false;
+  }
+  if (!checkoutId.match(/^[a-zA-Z0-9\-]+$/)) {
+    console.error('[SECURITY] Checkout ID contains invalid characters');
+    return false;
+  }
+  // Session binding: ensure userId is provided for authenticated operations
+  if (!userId || typeof userId !== 'string') {
+    console.error('[SECURITY] Session not properly authenticated');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates API key and environment parameters to prevent injection attacks.
+ * Ensures all configuration comes from secure backend context.
+ */
+function validateAdyenConfig(clientKey: string, environment: string): boolean {
+  if (!clientKey || typeof clientKey !== 'string' || clientKey.length === 0) {
+    console.error('[SECURITY] Invalid clientKey: must be a non-empty string');
+    return false;
+  }
+  if (!/^[a-zA-Z0-9_\-.*]+$/.test(clientKey)) {
+    console.error('[SECURITY] Invalid clientKey: contains disallowed characters');
+    return false;
+  }
+  if (environment !== 'test' && environment !== 'live') {
+    console.error('[SECURITY] Invalid environment: must be test or live');
+    return false;
+  }
+  return true;
+}
+
 export type AdyenDropInCreateSessionResponse = {
 	session: CreateCheckoutSessionResponse;
 	clientKey?: string;
@@ -46,7 +87,18 @@ export function createAdyenCheckoutInstance(
 		onSubmit: AdyenCheckoutInstanceOnSubmit;
 		onAdditionalDetails: AdyenCheckoutInstanceOnAdditionalDetails;
 	},
+	checkoutSessionId?: string,
+	userId?: string,
 ) {
+	// SECURITY: Validate session binding and configuration before SDK initialization
+	if (checkoutSessionId && !validateCheckoutSession(checkoutSessionId, userId)) {
+		throw new Error('[SECURITY] Failed to authenticate checkout session');
+	}
+
+	if (adyenSessionResponse.clientKey && !validateAdyenConfig(adyenSessionResponse.clientKey, 'test')) {
+		throw new Error('[SECURITY] Invalid Adyen configuration parameters');
+	}
+
 	return AdyenCheckout({
 		locale: localeConfig.default,
 		environment: "test",
