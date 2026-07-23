@@ -58,7 +58,7 @@ function validateSaleorApiUrl(urlString: string | undefined): string {
 
 const saleorApiUrl = validateSaleorApiUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL);
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+let schemaUrl = saleorApiUrl;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
