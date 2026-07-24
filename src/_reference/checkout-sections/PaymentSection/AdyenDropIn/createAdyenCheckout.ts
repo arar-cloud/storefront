@@ -92,6 +92,23 @@ function validateSDKConfig(config: Record<string, unknown>): boolean {
   return true;
 }
 
+/**
+ * Validates Adyen API responses to prevent malicious data injection
+ * Ensures response structure and types are correct before processing
+ */
+function validateAdyenCheckoutResponse(response: any): boolean {
+  if (!response || typeof response !== 'object') {
+    console.error('[SECURITY] Invalid Adyen response structure');
+    return false;
+  }
+  // Validate critical response properties
+  if (response.resultCode && typeof response.resultCode !== 'string') {
+    console.error('[SECURITY] Invalid resultCode in Adyen response');
+    return false;
+  }
+  return true;
+}
+
 export type AdyenDropInCreateSessionResponse = {
 	session: CreateCheckoutSessionResponse;
 	clientKey?: string;
@@ -175,10 +192,27 @@ export function createAdyenCheckoutInstance(
 			sessionData: adyenSessionResponse.session.sessionData,
 		},
 		onPaymentCompleted: (result: any, component: any) => {
-			console.info(result, component);
+			// Validate Adyen API response before processing
+			try {
+				if (!validateAdyenCheckoutResponse(result)) {
+					throw new Error('Payment result validation failed');
+				}
+				console.info(result, component);
+			} catch (error) {
+				console.error('[SECURITY] Payment completion validation error:', error instanceof Error ? error.message : 'Unknown error');
+			}
 		},
 		onError: (error: any, component: any) => {
-			console.error(error.name, error.message, error.stack, component);
+			// Sanitize error output to prevent leaking sensitive information
+			if (error && typeof error === 'object') {
+				const sanitizedError = {
+					name: typeof error.name === 'string' ? error.name : 'UnknownError',
+					message: typeof error.message === 'string' ? error.message : 'Unknown error occurred'
+				};
+				console.error('[SECURITY] Adyen error:', sanitizedError, component);
+			} else {
+				console.error('[SECURITY] Adyen error: unexpected error format');
+			}
 		},
 		onSubmit,
 		onAdditionalDetails,
