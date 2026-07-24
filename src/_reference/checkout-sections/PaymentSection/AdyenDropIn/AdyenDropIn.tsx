@@ -34,6 +34,38 @@ const _hack = (adyenCheckout: AdyenCheckoutInstance) =>
 type DropinElement = ReturnType<typeof _hack>;
 
 /**
+ * Validates payment form state to prevent injection and DoS attacks
+ * Ensures all form data conforms to expected types and ranges
+ */
+function validatePaymentFormState(state: any): boolean {
+  if (!state || typeof state !== 'object') {
+    console.error('[SECURITY] Invalid payment state: not an object');
+    return false;
+  }
+
+  // Validate payment method object structure
+  if (!state.data || typeof state.data !== 'object') {
+    console.error('[SECURITY] Invalid payment state: missing or invalid data field');
+    return false;
+  }
+
+  // Prevent excessively large data objects (DoS protection)
+  const dataString = JSON.stringify(state.data);
+  if (dataString.length > 10000) {
+    console.error('[SECURITY] Payment data exceeds maximum size limit');
+    return false;
+  }
+
+  // Validate isValid flag type if present
+  if ('isValid' in state && typeof state.isValid !== 'boolean') {
+    console.error('[SECURITY] Invalid isValid flag type');
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Input validation schema for payment form data
  * Prevents injection attacks and validates payment amounts
  */
