@@ -9,6 +9,32 @@
  * 
  * Sensitive error details are logged server-side only.
  */
+
+/**
+ * Redacts sensitive payment information from error messages
+ * Removes transaction IDs, card details, internal codes, and stack traces
+ * Implements defense-in-depth to prevent information disclosure attacks
+ */
+function redactSensitiveData(message: string): string {
+  if (typeof message !== 'string') {
+    return 'A payment error occurred';
+  }
+  
+  return message
+    // Remove transaction/reference IDs (UUID or numeric patterns)
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[REDACTED]')
+    .replace(/ref[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]')
+    .replace(/txn[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]')
+    // Remove card details (PAN, CVV patterns)
+    .replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD]')
+    .replace(/\b[0-9]{3,4}\b(?=.*cvv|cvc|cid)/gi, '[CVV]')
+    // Remove internal error codes and stack traces
+    .replace(/Error[:#]\s*[A-Z0-9_]+/gi, '[ERROR]')
+    .replace(/at\s+[a-zA-Z0-9$_.<>:]+/g, '[STACK]')
+    // Remove file paths and URLs that might reveal internals
+    .replace(/\/(src|app|lib)\/[^\s"']+/g, '[PATH]');
+}
+
 export const adyenErrorMessages = {
 	refused: "The transaction was refused.",
 	acquirerError: "The transaction could not be processed. Please try again or contact support.",
