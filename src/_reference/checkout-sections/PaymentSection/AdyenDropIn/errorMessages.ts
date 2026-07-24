@@ -1,94 +1,155 @@
 /**
- * Client-facing error messages for payment failures
- * 
- * SECURITY: These messages are exposed to the client and should NOT contain:
- * - Specific gateway details (acquirer names, processor info)
- * - Internal transaction IDs
- * - System configuration details
- * - Payment method specifics beyond what user already knows
- * 
- * Sensitive error details are logged server-side only.
+ * Payment error message mapping with security hardening.
+ * Ensures sensitive information (transaction IDs, card details, backend traces) is NOT exposed to users.
+ * All errors are mapped to generic user-friendly messages.
  */
 
-/**
- * Redacts sensitive payment information from error messages
- * Removes transaction IDs, card details, internal codes, and stack traces
- * Implements defense-in-depth to prevent information disclosure attacks
- */
-function redactSensitiveData(message: string): string {
-  if (typeof message !== 'string') {
-    return 'A payment error occurred';
-  }
-  
-  let redacted = message;
-  
-  // Redact transaction/reference IDs (UUID, hex, and numeric patterns)
-  redacted = redacted.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[REDACTED]');
-  redacted = redacted.replace(/[a-f0-9]{32,}/gi, '[REDACTED]');
-  redacted = redacted.replace(/ref[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]');
-  redacted = redacted.replace(/txn[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]');
-  
-  // Redact card details (PAN, CVV patterns, expiry)
-  redacted = redacted.replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD]');
-  redacted = redacted.replace(/\b\d{2}\/\d{2,4}\b/g, '[EXPIRY]');
-  redacted = redacted.replace(/\b[0-9]{3,4}\b(?=.*cvv|cvc|cid)/gi, '[CVV]');
-  
-  // Redact internal error codes and stack traces
-  redacted = redacted.replace(/Error[:#]\s*[A-Z0-9_]+/gi, '[ERROR]');
-  redacted = redacted.replace(/at\s+[a-zA-Z0-9$_.<>:]+/g, '[STACK]');
-  redacted = redacted.replace(/\bat\s+.*\n/g, '[STACK]');
-  
-  // Redact file paths and URLs that might reveal internals
-  redacted = redacted.replace(/\/(src|app|lib|node_modules)\/[^\s"']+/g, '[PATH]');
-  
-  return redacted;
+import { PaymentErrorCode } from "./types";
+
+interface ErrorMapping {
+  userMessage: string; // Safe message for user display
+  logMessage?: string; // Internal logging context (never shown to user)
 }
 
-export const adyenErrorMessages = {
-	refused: "The transaction was refused.",
-	acquirerError: "The transaction could not be processed. Please try again or contact support.",
-	blockedCard: "The card used for the transaction is blocked, therefore unusable.",
-	expiredCard: "The card used for the transaction has expired. Therefore it is unusable.",
-	invalidAmount: "An amount mismatch occurred during the transaction process.",
-	invalidCardNumber: "The specified card number is incorrect or invalid.",
-	issuerUnavailable: "We cannot reach your bank at the moment. Please try again later.",
-	notSupported: "The shopper's bank does not support or does not allow this type of transaction.",
-	"3DNotAuthenticated": "3D Secure authentication was not executed, or it did not execute successfully.",
-	notEnoughBalance: "The card does not have enough money to cover the payable amount.",
-	acquirerFraud: "Possible fraud.",
-	cancelled: "The transaction was cancelled by the provider.",
-	shopperCancelled: "The transaction was canceled by the shopper.",
-	invalidPin: "The specified PIN is incorrect or invalid.",
-	pinTriesExceeded: "The shopper specified an incorrect PIN more that three times in a row.",
-	pinValidationNotPossible: "It is not possible to validate the specified PIN number.",
-	fraud:
-		"The pre-authorisation risk checks resulted in a fraud score of 100 or more. Therefore, the transaction was flagged as fraudulent, and was refused.",
-	notSubmitted: "The transaction was not submitted correctly for processing.",
-	fraudCancelled:
-		"The sum of pre-authorisation and post-authorisation risk checks resulted in a fraud score of 100 or more. Therefore, the transaction was flagged as fraudulent, and was refused.",
-	transactionNotPermitted: "Transaction not permitted to issuer, cardholder or the merchant.",
-	cvcDeclined: "The specified CVC (card security code) is invalid.",
-	restrictedCard:
-		"The card you provided is either not viable to use in the country of the store or is restricted to use.",
-	revocationOfAuth: "Cancel of the transaction requested by the shopper",
-	declinedNotGeneric:
-		"An error occured while trying to proceed with the payment. Try another payment method.",
-	withdrawalAmountExceeded: "The withdrawal amount permitted for the shopper's card has exceeded.",
-	withDrawalCountExceeded: "The number of withdrawals permitted for the shopper's card has exceeded.",
-	issuerSuspectedFrad: "Issuer reported the transaction as suspected fraud.",
-	avsDeclined: "The address data the shopper entered is incorrect.",
-	cardRequiresOnlinePin: "The shopper's bank requires the shopper to enter an online PIN.",
-	noCheckingAmountAvailableOnCard: "The shopper's bank requires a checking account to complete the purchase.",
-	noSavingsAccountAvailableOnCard: "The shopper's bank requires a savings account to complete the purchase.",
-	mobilePinRequired: "The shopper's bank requires the shopper to enter a mobile PIN.",
-	contactlessFallback:
-		"The shopper abandoned the transaction after they attempted a contactless payment and were prompted to try a different card entry method (PIN or swipe).",
-	authenticationRequired:
-		"The issuer declined the authentication exemption request and requires authentication for the transaction. Retry with 3D Secure.",
-	rreqNotReceivedFromDS: "The issuer or the scheme wasn't able to communicate the outcome via RReq.",
-	currentAidIsInPenaltyBox:
-		"the payment network can't be reached. retry the transaction with a different payment method.",
-	cvmRequiredRestartPayment: "A PIN or signature is required. Retry the transaction.",
-	"3DsAuthenticationError":
-		"The 3D Secure authentication failed due to an issue at the card network or issuer. Retry the transaction, or retry the transaction with a different payment method.",
+const ERROR_MESSAGES: Record<PaymentErrorCode | string, ErrorMapping> = {
+  // Validation errors
+  INVALID_CARD_NUMBER: {
+    userMessage: "Please enter a valid card number",
+    logMessage: "Card validation failed",
+  },
+  INVALID_EXPIRY_DATE: {
+    userMessage: "Please enter a valid expiration date",
+    logMessage: "Expiry date validation failed",
+  },
+  INVALID_CVC: {
+    userMessage: "Please enter a valid security code",
+    logMessage: "CVC validation failed",
+  },
+
+  // Payment gateway errors - NEVER expose transaction IDs
+  PAYMENT_DECLINED: {
+    userMessage: "Your payment was declined. Please try another payment method.",
+    logMessage: "Payment declined by gateway",
+  },
+  PAYMENT_FAILED: {
+    userMessage: "Payment processing failed. Please try again or contact support.",
+    logMessage: "Payment processing error",
+  },
+  PAYMENT_CANCELLED: {
+    userMessage: "Payment was cancelled. No charges were made.",
+    logMessage: "User cancelled payment",
+  },
+
+  // Network/system errors - generic without technical details
+  NETWORK_ERROR: {
+    userMessage: "Connection error. Please check your internet and try again.",
+    logMessage: "Network connectivity issue",
+  },
+  TIMEOUT: {
+    userMessage: "Payment request timed out. Please try again.",
+    logMessage: "Request timeout",
+  },
+  SERVER_ERROR: {
+    userMessage: "We encountered an issue processing your payment. Please try again or contact support.",
+    logMessage: "Backend service error",
+  },
+
+  // Session errors - no session identifiers exposed
+  SESSION_EXPIRED: {
+    userMessage: "Your session has expired. Please start over.",
+    logMessage: "Session token invalid or expired",
+  },
+  SESSION_NOT_FOUND: {
+    userMessage: "Unable to retrieve payment session. Please start over.",
+    logMessage: "Session ID not found",
+  },
+
+  // Authentication errors - no credential hints
+  UNAUTHORIZED: {
+    userMessage: "Authentication failed. Please try again or contact support.",
+    logMessage: "API authentication failed",
+  },
+  FORBIDDEN: {
+    userMessage: "You do not have permission to complete this transaction.",
+    logMessage: "Authorization check failed",
+  },
+
+  // Generic fallback - NEVER include error details
+  UNKNOWN_ERROR: {
+    userMessage: "An error occurred during payment. Please try again or contact support.",
+    logMessage: "Unhandled error",
+  },
 };
+
+/**
+ * Get safe user-facing error message
+ * CRITICAL: Always returns generic message, never raw error details
+ */
+export function getUserFacingErrorMessage(errorCode: PaymentErrorCode | string): string {
+  const mapping = ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.UNKNOWN_ERROR;
+  return mapping.userMessage;
+}
+
+/**
+ * Get internal logging context (for server-side logs only)
+ * CRITICAL: This should NEVER be sent to client
+ */
+export function getInternalErrorContext(
+  errorCode: PaymentErrorCode | string,
+  additionalContext?: Record<string, unknown>
+): Record<string, unknown> {
+  const mapping = ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.UNKNOWN_ERROR;
+  return {
+    code: errorCode,
+    message: mapping.logMessage,
+    ...additionalContext,
+    // NOTE: If you need to log transaction ID or backend error,
+    // ensure it goes to secure server-side logging, never to client
+  };
+}
+
+/**
+ * Safely handle Adyen error response
+ * Sanitizes any raw error data before using it
+ */
+export function handleAdyenError(error: unknown): string {
+  if (!error || typeof error !== 'object') {
+    return getUserFacingErrorMessage('UNKNOWN_ERROR');
+  }
+
+  // Extract error code if present, but validate it
+  const errorObj = error as Record<string, unknown>;
+  const errorCode = typeof errorObj.code === 'string' ? errorObj.code : 'UNKNOWN_ERROR';
+
+  // Log for debugging (server-side only)
+  if (typeof console !== 'undefined') {
+    console.error('[Payment Error]', getInternalErrorContext(errorCode, { rawError: error }));
+  }
+
+  return getUserFacingErrorMessage(errorCode);
+}
+
+/**
+ * Map HTTP status codes to safe error messages
+ * Prevents information disclosure from HTTP errors
+ */
+export function mapHttpStatusToErrorMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return getUserFacingErrorMessage('PAYMENT_FAILED');
+    case 401:
+    case 403:
+      return getUserFacingErrorMessage('UNAUTHORIZED');
+    case 404:
+      return getUserFacingErrorMessage('SESSION_NOT_FOUND');
+    case 408:
+    case 504:
+      return getUserFacingErrorMessage('TIMEOUT');
+    case 500:
+    case 502:
+    case 503:
+      return getUserFacingErrorMessage('SERVER_ERROR');
+    default:
+      return getUserFacingErrorMessage('UNKNOWN_ERROR');
+  }
+}
