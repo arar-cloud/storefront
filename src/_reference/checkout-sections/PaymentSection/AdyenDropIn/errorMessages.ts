@@ -20,19 +20,28 @@ function redactSensitiveData(message: string): string {
     return 'A payment error occurred';
   }
   
-  return message
-    // Remove transaction/reference IDs (UUID or numeric patterns)
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[REDACTED]')
-    .replace(/ref[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]')
-    .replace(/txn[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]')
-    // Remove card details (PAN, CVV patterns)
-    .replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD]')
-    .replace(/\b[0-9]{3,4}\b(?=.*cvv|cvc|cid)/gi, '[CVV]')
-    // Remove internal error codes and stack traces
-    .replace(/Error[:#]\s*[A-Z0-9_]+/gi, '[ERROR]')
-    .replace(/at\s+[a-zA-Z0-9$_.<>:]+/g, '[STACK]')
-    // Remove file paths and URLs that might reveal internals
-    .replace(/\/(src|app|lib)\/[^\s"']+/g, '[PATH]');
+  let redacted = message;
+  
+  // Redact transaction/reference IDs (UUID, hex, and numeric patterns)
+  redacted = redacted.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[REDACTED]');
+  redacted = redacted.replace(/[a-f0-9]{32,}/gi, '[REDACTED]');
+  redacted = redacted.replace(/ref[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]');
+  redacted = redacted.replace(/txn[_-]?[0-9a-zA-Z]{10,}/gi, '[REDACTED]');
+  
+  // Redact card details (PAN, CVV patterns, expiry)
+  redacted = redacted.replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD]');
+  redacted = redacted.replace(/\b\d{2}\/\d{2,4}\b/g, '[EXPIRY]');
+  redacted = redacted.replace(/\b[0-9]{3,4}\b(?=.*cvv|cvc|cid)/gi, '[CVV]');
+  
+  // Redact internal error codes and stack traces
+  redacted = redacted.replace(/Error[:#]\s*[A-Z0-9_]+/gi, '[ERROR]');
+  redacted = redacted.replace(/at\s+[a-zA-Z0-9$_.<>:]+/g, '[STACK]');
+  redacted = redacted.replace(/\bat\s+.*\n/g, '[STACK]');
+  
+  // Redact file paths and URLs that might reveal internals
+  redacted = redacted.replace(/\/(src|app|lib|node_modules)\/[^\s"']+/g, '[PATH]');
+  
+  return redacted;
 }
 
 export const adyenErrorMessages = {
