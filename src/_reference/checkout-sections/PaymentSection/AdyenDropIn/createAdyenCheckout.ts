@@ -49,6 +49,31 @@ function validateAdyenConfig(clientKey: string, environment: string): boolean {
   return true;
 }
 
+/**
+ * Validates session data structure and content to prevent tampering
+ * Ensures session ID and sessionData are properly formed and not oversized
+ */
+function validateSessionData(sessionId: string, sessionData: string): boolean {
+  if (!sessionId || typeof sessionId !== 'string') {
+    console.error('[SECURITY] Invalid session ID');
+    return false;
+  }
+  if (!/^[a-zA-Z0-9\-_]{20,}$/.test(sessionId)) {
+    console.error('[SECURITY] Session ID format invalid');
+    return false;
+  }
+  if (!sessionData || typeof sessionData !== 'string') {
+    console.error('[SECURITY] Invalid session data');
+    return false;
+  }
+  // Prevent excessively large session data (potential DoS)
+  if (sessionData.length > 50000) {
+    console.error('[SECURITY] Session data exceeds maximum size');
+    return false;
+  }
+  return true;
+}
+
 export type AdyenDropInCreateSessionResponse = {
 	session: CreateCheckoutSessionResponse;
 	clientKey?: string;
