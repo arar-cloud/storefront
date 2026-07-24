@@ -3,6 +3,53 @@ import { type FC, useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 /**
+ * Input validation schemas for Adyen payment data
+ * Validates all external API responses and user inputs before processing
+ */
+const PaymentDataSchema = z.object({
+  orderId: z.string().min(1).max(255).regex(/^[a-zA-Z0-9_-]+$/, 'Invalid order ID format'),
+  amount: z.number().positive().finite(),
+  email: z.string().email().max(255),
+  currency: z.string().length(3).regex(/^[A-Z]{3}$/, 'Invalid currency code'),
+});
+
+const AdyenResponseSchema = z.object({
+  resultCode: z.enum(['Authorised', 'Pending', 'Refused', 'Cancelled', 'Error']),
+  pspReference: z.string().optional(),
+  refusalReasonCode: z.string().optional(),
+  refusalReason: z.string().optional(),
+}).passthrough();
+
+const PaymentMethodSchema = z.object({
+  type: z.string().max(50).regex(/^[a-z_]+$/, 'Invalid payment method type'),
+  isStored: z.boolean().optional(),
+}).passthrough();
+
+function validatePaymentData(data: unknown) {
+  try {
+    return PaymentDataSchema.parse(data);
+  } catch (error) {
+    throw new Error('Invalid payment data: schema validation failed');
+  }
+}
+
+function validateAdyenResponse(response: unknown) {
+  try {
+    return AdyenResponseSchema.parse(response);
+  } catch (error) {
+    throw new Error('Invalid Adyen response: schema validation failed');
+  }
+}
+
+function validatePaymentMethod(method: unknown) {
+  try {
+    return PaymentMethodSchema.parse(method);
+  } catch (error) {
+    throw new Error('Invalid payment method: schema validation failed');
+  }
+}
+
+/**
  * Sanitize error message to prevent XSS attacks
  * Removes any HTML tags and script content from error messages
  */
