@@ -18,6 +18,41 @@ function sanitizeErrorMessage(message: string): string {
     .slice(0, 255); // Limit length to prevent DoS via long strings
 }
 
+/**
+ * Sanitize URL to prevent javascript: and data: protocol injection
+ * Allows only http:// and https:// protocols
+ */
+function sanitizeUrl(url: string | undefined): string {
+  if (!url || typeof url !== 'string') {
+    return '';
+  }
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      console.warn('Invalid URL protocol detected:', parsed.protocol);
+      return '';
+    }
+    return url;
+  } catch {
+    console.warn('Invalid URL format detected');
+    return '';
+  }
+}
+
+/**
+ * Safely render text content to prevent DOM-XSS
+ * Never use with innerHTML or dangerouslySetInnerHTML
+ */
+function createSafeTextNode(text: string): string {
+  if (typeof text !== 'string') {
+    return '';
+  }
+  // Browser's textContent automatically escapes HTML entities
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 import { createAdyenCheckoutConfig } from "@/checkout/sections/PaymentSection/AdyenDropIn/utils";
 import {
 	type AdyenDropinProps,
