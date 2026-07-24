@@ -124,6 +124,11 @@ export function createAdyenCheckoutInstance(
 		throw new Error('[SECURITY] Invalid Adyen configuration parameters');
 	}
 
+	// SECURITY: Validate session data structure and content
+	if (!validateSessionData(adyenSessionResponse.session.id, adyenSessionResponse.session.sessionData)) {
+		throw new Error('[SECURITY] Session data validation failed');
+	}
+
 	// SECURITY: Validate all SDK configuration before initialization
 	const sdkConfig = {
 		clientKey: adyenSessionResponse.clientKey,
