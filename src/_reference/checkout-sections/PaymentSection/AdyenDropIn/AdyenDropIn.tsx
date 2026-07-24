@@ -88,15 +88,32 @@ export const AdyenDropIn: FC<AdyenDropinProps> = ({ config }) => {
 
 	const createAdyenCheckoutInstance = useCallback(
 		async (container: HTMLDivElement, data: AdyenGatewayInitializePayload) => {
-			const adyenCheckout = await AdyenCheckout(
-				createAdyenCheckoutConfig({ ...data, onSubmit, onAdditionalDetails }),
-			);
+			try {
+				// SECURITY: Validate container element before DOM operations
+				if (!container || !(container instanceof HTMLDivElement)) {
+					console.error('[SECURITY] Invalid container element for payment form');
+					return;
+				}
+
+				// SECURITY: Validate payment configuration data
+				if (!validatePaymentFormState({ data })) {
+					console.error('[SECURITY] Payment configuration validation failed');
+					return;
+				}
+
+				const adyenCheckout = await AdyenCheckout(
+					createAdyenCheckoutConfig({ ...data, onSubmit, onAdditionalDetails }),
+				);
 
 			dropinComponentRef.current?.unmount();
 
 			const dropin = adyenCheckout.create("dropin").mount(container);
 
 			dropinComponentRef.current = dropin;
+			} catch (error) {
+				const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+				console.error('[SECURITY] Payment form initialization error:', sanitizeErrorMessage(errorMsg));
+			}
 		},
 		[onAdditionalDetails, onSubmit],
 	);
