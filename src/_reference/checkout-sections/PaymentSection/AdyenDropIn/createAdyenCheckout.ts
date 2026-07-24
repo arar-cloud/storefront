@@ -74,6 +74,24 @@ function validateSessionData(sessionId: string, sessionData: string): boolean {
   return true;
 }
 
+/**
+ * Validates that SDK configuration only contains expected, safe properties
+ * Prevents injection of malicious configuration into Adyen SDK
+ */
+function validateSDKConfig(config: Record<string, unknown>): boolean {
+  const allowedKeys = new Set(['clientKey', 'environment', 'locale', 'session']);
+  const configKeys = Object.keys(config);
+  
+  // Reject any unexpected keys that could be injected
+  for (const key of configKeys) {
+    if (!allowedKeys.has(key)) {
+      console.error(`[SECURITY] Unexpected SDK config key: ${key}`);
+      return false;
+    }
+  }
+  return true;
+}
+
 export type AdyenDropInCreateSessionResponse = {
 	session: CreateCheckoutSessionResponse;
 	clientKey?: string;
@@ -142,6 +160,11 @@ export function createAdyenCheckoutInstance(
 			throw new Error(`[SECURITY] Invalid SDK configuration: ${key} must be non-empty string`);
 		}
 	});
+
+	// SECURITY: Validate SDK configuration against allowlist to prevent injection
+	if (!validateSDKConfig(sdkConfig)) {
+		throw new Error('[SECURITY] SDK configuration contains unexpected properties');
+	}
 
 	return AdyenCheckout({
 		locale: sdkConfig.locale,
