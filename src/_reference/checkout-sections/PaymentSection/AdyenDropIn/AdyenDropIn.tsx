@@ -1,5 +1,5 @@
 import AdyenCheckout from "@adyen/adyen-web";
-import { type FC, useCallback, useEffect, useRef } from "react";
+import { type FC, useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 /**
