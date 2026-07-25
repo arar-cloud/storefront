@@ -1,5 +1,6 @@
 import AdyenCheckout from "@adyen/adyen-web";
 import { type FC, useCallback, useEffect, useRef, useState } from "react";
+import { validateCSRFToken, validateSessionId } from "./validation";
 import { z } from "zod";
 
 /**
@@ -167,6 +168,8 @@ export const AdyenDropIn: FC<AdyenDropinProps> = ({ config }) => {
 	const { onSubmit, onAdditionalDetails } = useAdyenDropin({ config });
 	const dropinContainerElRef = useRef<HTMLDivElement>(null);
 	const dropinComponentRef = useRef<DropinElement | null>(null);
+	const [validationError, setValidationError] = useState<string | null>(null);
+	const [isValidated, setIsValidated] = useState(false);
 
 	const createAdyenCheckoutInstance = useCallback(
 		async (container: HTMLDivElement, data: AdyenGatewayInitializePayload) => {
@@ -200,13 +203,53 @@ export const AdyenDropIn: FC<AdyenDropinProps> = ({ config }) => {
 		[onAdditionalDetails, onSubmit],
 	);
 
+	// Validate session and CSRF token on mount
 	useEffect(() => {
-		if (dropinContainerElRef.current && !dropinComponentRef.current) {
+		try {
+			// Validate CSRF token from meta tag
+			const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+			if (!csrfToken) {
+				throw new Error('CSRF token not found - payment cannot proceed');
+			}
+			validateCSRFToken(csrfToken);
+
+			// Validate session ID if present in config
+			if (config.data?.sessionId) {
+				validateSessionId(config.data.sessionId);
+			}
+
+			setIsValidated(true);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Session validation failed';
+			setValidationError(message);
+			console.error('[Security] Payment validation failed:', message);
+		}
+	}, [config.data]);
+
+	useEffect(() => {
+		if (dropinContainerElRef.current && !dropinComponentRef.current && isValidated) {
 			void createAdyenCheckoutInstance(dropinContainerElRef.current, config.data);
 		}
-	}, []);
+	}, [isValidated]);
+
+	// Prevent rendering until validation is complete
+	if (!isValidated) {
+		if (validationError) {
+			return (
+				<div className="rounded-lg border border-red-200 bg-red-50 p-4">
+					<p className="text-sm font-medium text-red-800">Payment session validation failed</p>
+					<p className="mt-1 text-xs text-red-600">Please refresh the page and try again.</p>
+				</div>
+			);
+		}
+		// Still validating
+		return <div className="h-96 animate-pulse rounded-lg bg-gray-200" />;
+	}
+
+	// Additional CSRF token validation before render
+	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
 	return (
-		<div ref={dropinContainerElRef} />
+		<div ref={dropinContainerElRef} data-csrf-token={csrfToken} />
 	);
 };
