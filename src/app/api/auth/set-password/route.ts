@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
+import { validateEmail, validatePassword, checkRateLimit } from "@/lib/auth/validation";
 
 const SET_PASSWORD_MUTATION = `
   mutation SetPassword($email: String!, $token: String!, $password: String!) {
@@ -34,18 +35,27 @@ export async function POST(request: NextRequest) {
 	const body = (await request.json()) as SetPasswordRequest;
 	const { email, token, password } = body;
 
-	if (!email || !token || !password) {
-		return NextResponse.json(
-			{ errors: [{ message: "Email, token, and password are required", code: "REQUIRED" }] },
-			{ status: 400 },
-		);
+	// Rate limit by email
+	const rateCheck = checkRateLimit(`setpass:${email}`);
+	if (!rateCheck.allowed) {
+		return NextResponse.json({ errors: [{ message: rateCheck.error }] }, { status: 429 });
 	}
 
-	if (password.length < 8) {
-		return NextResponse.json(
-			{ errors: [{ message: "Password must be at least 8 characters", code: "PASSWORD_TOO_SHORT" }] },
-			{ status: 400 },
-		);
+	// Validate email format
+	const emailValidation = validateEmail(email);
+	if (!emailValidation.valid) {
+		return NextResponse.json({ errors: [{ message: emailValidation.error }] }, { status: 400 });
+	}
+
+	// Validate token parameter - must be non-empty string
+	if (!token || typeof token !== "string" || token.length === 0) {
+		return NextResponse.json({ errors: [{ message: "Invalid token parameter" }] }, { status: 400 });
+	}
+
+	// Validate password strength
+	const passwordValidation = validatePassword(password);
+	if (!passwordValidation.valid) {
+		return NextResponse.json({ errors: [{ message: passwordValidation.error }] }, { status: 400 });
 	}
 
 	const result = await executeRawGraphQL<SetPasswordResult>({
@@ -78,17 +88,17 @@ export async function POST(request: NextRequest) {
 		cookieStore.set("token", setPassword.token, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
+			sameSite: "strict",
 			path: "/",
-			maxAge: 60 * 60, // 1 hour
+			maxAge: 3600, // 1 hour
 		});
 
 		cookieStore.set("refreshToken", setPassword.refreshToken, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
+			sameSite: "strict",
 			path: "/",
-			maxAge: 60 * 60 * 24 * 30, // 30 days
+			maxAge: 604800, // 7 days
 		});
 
 		return NextResponse.json({
