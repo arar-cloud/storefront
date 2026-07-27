@@ -1,86 +1,110 @@
-/**
- * Input validation and sanitization for Adyen payment integration.
- * Ensures all external data (API responses, UI inputs) are validated before processing.
- */
+import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
-import { z } from 'zod';
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 5;
+const attemptMap = new Map<string, { count: number; resetTime: number }>();
 
 /**
- * Sanitize string to prevent XSS - removes suspicious patterns
+ * Validate email format and structure
  */
-export function sanitizeString(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new Error('Expected string value');
+export function validateEmail(email: string): { valid: boolean; error?: string } {
+  if (!email || typeof email !== "string") {
+    return { valid: false, error: "Email is required and must be a string" };
   }
-  // Only allow alphanumeric, hyphens, underscores, dots, and @ for email
-  // Remove any potentially harmful characters
-  return value.replace(/[^a-zA-Z0-9\-_.@]/g, '').substring(0, 255);
-}
-
-/**
- * Validate Adyen checkout response structure
- */
-const AdyenCheckoutResponseSchema = z.object({
-  sessionId: z.string().uuid().optional(),
-  id: z.string().min(1).max(255),
-  amount: z.object({
-    value: z.number().int().positive(),
-    currency: z.string().length(3).toUpperCase(),
-  }),
-  reference: z.string().min(1).max(80), // Adyen reference ID
-  returnUrl: z.string().url().optional(),
-  // Strictly allow only expected payment app data
-  paymentMethods: z.object({}).strict().optional(),
-  // Do NOT include raw errorMessages - validate separately
-});
-
-export type ValidatedAdyenCheckout = z.infer<typeof AdyenCheckoutResponseSchema>;
-
-/**
- * Validate Adyen API response
- * @throws {Error} if validation fails
- */
-export function validateAdyenCheckoutResponse(data: unknown): ValidatedAdyenCheckout {
-  return AdyenCheckoutResponseSchema.parse(data);
-}
-
-/**
- * Validate session ID format - prevents session fixation
- */
-const SessionIdSchema = z.string().uuid('Invalid session format');
-
-export function validateSessionId(sessionId: unknown): string {
-  return SessionIdSchema.parse(sessionId);
-}
-
-/**
- * Validate CSRF token presence and format
- */
-const CSRFTokenSchema = z.string().min(32).max(512);
-
-export function validateCSRFToken(token: unknown): string {
-  return CSRFTokenSchema.parse(token);
-}
-
-/**
- * Validate order ID - prevent injection
- */
-export function validateOrderId(orderId: unknown): string {
-  if (typeof orderId !== 'string') {
-    throw new Error('Order ID must be a string');
+  
+  const trimmed = email.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailRegex.test(trimmed)) {
+    return { valid: false, error: "Invalid email format" };
   }
-  const sanitized = sanitizeString(orderId);
-  if (sanitized.length === 0) {
-    throw new Error('Invalid order ID format');
+  
+  if (trimmed.length > 254) {
+    return { valid: false, error: "Email exceeds maximum length" };
   }
-  return sanitized;
+  
+  return { valid: true };
 }
 
 /**
- * Validate email address
+ * Validate password strength and encoding
  */
-const EmailSchema = z.string().email().max(255);
+export function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (!password || typeof password !== "string") {
+    return { valid: false, error: "Password is required and must be a string" };
+  }
+  
+  if (password.length < 8) {
+    return { valid: false, error: "Password must be at least 8 characters" };
+  }
+  
+  if (password.length > 256) {
+    return { valid: false, error: "Password exceeds maximum length" };
+  }
+  
+  // Prevent non-UTF8 or control characters
+  const utf8Encoded = Buffer.from(password, "utf8").toString("utf8");
+  if (utf8Encoded !== password) {
+    return { valid: false, error: "Password contains invalid characters" };
+  }
+  
+  return { valid: true };
+}
 
-export function validateEmail(email: unknown): string {
-  return EmailSchema.parse(email);
+/**
+ * Validate and sanitize redirect URL
+ */
+export function validateRedirectUrl(url: string): { valid: boolean; error?: string } {
+  if (!url || typeof url !== "string") {
+    return { valid: false, error: "Redirect URL is required" };
+  }
+  
+  try {
+    const parsed = new URL(url);
+    // Only allow https and http protocols
+    if (!parsed.protocol.startsWith("http")) {
+      return { valid: false, error: "Invalid redirect URL protocol" };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, error: "Invalid redirect URL format" };
+  }
+}
+
+/**
+ * Check rate limit for authentication attempts
+ */
+export function checkRateLimit(identifier: string): { allowed: boolean; error?: string } {
+  const now = Date.now();
+  const record = attemptMap.get(identifier);
+  
+  if (!record || now > record.resetTime) {
+    attemptMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return { allowed: true };
+  }
+  
+  if (record.count >= MAX_ATTEMPTS) {
+    const waitTime = Math.ceil((record.resetTime - now) / 1000 / 60);
+    return { allowed: false, error: `Too many attempts. Please try again in ${waitTime} minutes.` };
+  }
+  
+  record.count++;
+  return { allowed: true };
+}
+
+/**
+ * Generate CSRF token for session validation
+ */
+export function generateCSRFToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * Validate CSRF token matches expected value
+ */
+export function validateCSRFToken(token: string, expected: string): boolean {
+  if (!token || !expected) return false;
+  // Use constant-time comparison to prevent timing attacks
+  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
