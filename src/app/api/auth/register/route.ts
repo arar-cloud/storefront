@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, asValidationError, getUserMessage } from "@/lib/graphql";
+import { validateEmail, validatePassword, validateRedirectUrl, checkRateLimit } from "@/lib/auth/validation";
 
 const REGISTER_MUTATION = `
   mutation AccountRegister($input: AccountRegisterInput!) {
@@ -35,6 +36,35 @@ interface AccountRegisterResult {
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as RegisterRequest;
+	
+	// Rate limit by email
+	const rateCheck = checkRateLimit(`register:${body.email}`);
+	if (!rateCheck.allowed) {
+		return NextResponse.json({ errors: [{ message: rateCheck.error }] }, { status: 429 });
+	}
+	
+	// Validate email format
+	const emailValidation = validateEmail(body.email);
+	if (!emailValidation.valid) {
+		return NextResponse.json({ errors: [{ message: emailValidation.error }] }, { status: 400 });
+	}
+	
+	// Validate password strength and encoding
+	const passwordValidation = validatePassword(body.password);
+	if (!passwordValidation.valid) {
+		return NextResponse.json({ errors: [{ message: passwordValidation.error }] }, { status: 400 });
+	}
+	
+	// Validate redirect URL
+	const redirectValidation = validateRedirectUrl(body.redirectUrl);
+	if (!redirectValidation.valid) {
+		return NextResponse.json({ errors: [{ message: redirectValidation.error }] }, { status: 400 });
+	}
+	
+	// Validate channel parameter
+	if (!body.channel || typeof body.channel !== "string" || body.channel.length === 0) {
+		return NextResponse.json({ errors: [{ message: "Invalid channel parameter" }] }, { status: 400 });
+	}
 	const { email, password, firstName, lastName, channel, redirectUrl } = body;
 
 	if (!email || !password) {
