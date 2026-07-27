@@ -1,10 +1,32 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { randomUUID } from "crypto";
 import { LoginForm } from "@/ui/components/login-form";
 import { executeAuthenticatedGraphQL } from "@/lib/graphql";
 import { CurrentUserDocument } from "@/gql/graphql";
 import { AuthProvider } from "@/lib/auth";
+
+// Generate and validate CSRF tokens for session security
+function generateCSRFToken(): string {
+  return randomUUID();
+}
+
+function getOrCreateCSRFToken(): string {
+  const cookieStore = cookies();
+  let csrfToken = cookieStore.get('csrf-token')?.value;
+  if (!csrfToken) {
+    csrfToken = generateCSRFToken();
+    cookieStore.set('csrf-token', csrfToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600,
+      path: '/',
+    });
+  }
+  return csrfToken;
+}
 
 export const metadata = {
 	title: "Sign In",
@@ -12,9 +34,10 @@ export const metadata = {
 };
 
 export default function LoginPage(props: { params: Promise<{ channel: string }> }) {
+  const csrfToken = getOrCreateCSRFToken();
 	return (
 		<Suspense fallback={<LoginSkeleton />}>
-			<LoginContent params={props.params} />
+			<LoginContent params={props.params} csrfToken={csrfToken} />
 		</Suspense>
 	);
 }
