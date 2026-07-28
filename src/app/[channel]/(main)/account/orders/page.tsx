@@ -1,3 +1,16 @@
+// Authorization check for orders access
+async function checkOrdersAuthorization() {
+  const authClient = await getServerAuthClient();
+  const session = await authClient.getSession();
+
+  // Verify user is authenticated
+  if (!session || !session.user) {
+    return { authorized: false, error: "Unauthorized" };
+  }
+
+  return { authorized: true, user: session.user };
+}
+
 import { CurrentUserOrdersPaginatedDocument } from "@/gql/graphql";
 import { executeAuthenticatedGraphQL } from "@/lib/graphql";
 import { OrderRow } from "@/ui/components/account/order-row";
