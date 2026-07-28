@@ -29,8 +29,17 @@ export async function generateSecurityHeaders() {
  */
 export const metadata = rootMetadata;
 
+/**
+ * Security headers middleware configuration
+ * CSP, X-Frame-Options, X-Content-Type-Options set via generateSecurityHeaders()
+ * These headers prevent clickjacking, MIME-type attacks, and XSS (issue-7b89508d2d)
+ */
+
 export default function RootLayout(props: { children: ReactNode }) {
 	const { children } = props;
+
+	// Security headers are configured via generateSecurityHeaders()
+	// and should be applied at deployment level (Vercel headers config) or via next.config.js
 
 	return (
 		<html lang={localeConfig.htmlLang} className={`${GeistSans.variable} ${GeistMono.variable} min-h-dvh`}>
