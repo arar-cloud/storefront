@@ -19,6 +19,9 @@ function encodeHTML(str: string): string {
   return str.replace(/[&<>"']/g, (char) => map[char] || char);
 }
 
+// Alias for compatibility with security hardening pass
+const escapeHtml = encodeHTML;
+
 export const metadata = {
 	title: "ACME Storefront, powered by Saleor & Next.js",
 	description:
