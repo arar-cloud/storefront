@@ -1,3 +1,19 @@
+import { sanitizeSearchInput } from '@/lib/auth/validation';
+
+/**
+ * Validate and normalize order status filter
+ */
+function validateOrderStatus(status: string | null): string | null {
+  if (!status) return null;
+
+  const allowedStatuses = ['UNCONFIRMED', 'UNFULFILLED', 'FULFILLED', 'CANCELED'];
+  if (allowedStatuses.includes(status.toUpperCase())) {
+    return status.toUpperCase();
+  }
+
+  return null;
+}
+
 import { redirect } from "next/navigation";
 
 type Props = {

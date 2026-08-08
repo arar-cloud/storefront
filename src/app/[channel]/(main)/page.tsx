@@ -3,6 +3,24 @@ import { cacheLife, cacheTag } from "next/cache";
 import { ProductListByCollectionDocument, ProductOrderField, OrderDirection } from "@/gql/graphql";
 import { executePublicGraphQL } from "@/lib/graphql";
 import { ProductList } from "@/ui/components/product-list";
+import { validateChannelParam } from "@/lib/route-validation";
+
+/**
+ * XSS-safe HTML encoding utility
+ */
+function encodeHTML(str: string): string {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+  };
+  return str.replace(/[&<>"']/g, (char) => map[char] || char);
+}
+
+// Alias for compatibility with security hardening pass
+const escapeHtml = encodeHTML;
 
 export const metadata = {
 	title: "ACME Storefront, powered by Saleor & Next.js",

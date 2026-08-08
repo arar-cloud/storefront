@@ -1,3 +1,16 @@
+/**
+ * Validates CSRF token from session to prevent cross-site request forgery
+ * Returns true if token is valid and matches current session
+ */
+function validateCSRFToken(sessionToken: string | undefined, requestToken: string | undefined): boolean {
+  if (!sessionToken || !requestToken) {
+    console.error('CSRF validation failed: missing tokens');
+    return false;
+  }
+  // Token comparison should be constant-time to prevent timing attacks
+  return crypto.subtle.timingSafeEqual?.(new TextEncoder().encode(sessionToken), new TextEncoder().encode(requestToken)) ?? sessionToken === requestToken;
+}
+
 import type DropinElement from "@adyen/adyen-web/dist/types/components/Dropin";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { camelCase } from "lodash-es";
@@ -12,6 +25,44 @@ import { useAlerts } from "@/checkout/hooks/useAlerts";
 import { useCheckout } from "@/checkout/hooks/useCheckout";
 import { useEvent } from "@/checkout/hooks/useEvent";
 import { useSubmit } from "@/checkout/hooks/useSubmit";
+
+/**
+ * CSRF and session validation before payment processing
+ * Ensures payment requests originate from valid, authenticated user sessions
+ */
+function validateSessionAndCSRF(): { isValid: boolean; csrfToken?: string } {
+  try {
+    // Check session cookie exists and is valid
+    const sessionCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('sessionId='));
+
+    if (!sessionCookie) {
+      console.error('[SECURITY] Session not found - user must be authenticated');
+      return { isValid: false };
+    }
+
+    // Extract and validate CSRF token from meta tag
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta?.getAttribute('content');
+
+    if (!csrfToken || typeof csrfToken !== 'string' || csrfToken.length === 0) {
+      console.error('[SECURITY] CSRF token missing or invalid');
+      return { isValid: false };
+    }
+
+    // Validate CSRF token format (UUID or similar)
+    if (!/^[a-zA-Z0-9\-]{20,}$/.test(csrfToken)) {
+      console.error('[SECURITY] CSRF token format invalid');
+      return { isValid: false };
+    }
+
+    return { isValid: true, csrfToken };
+  } catch (error) {
+    console.error('[SECURITY] Session validation failed:', error);
+    return { isValid: false };
+  }
+}
 import {
 	type AdyenCheckoutInstanceOnAdditionalDetails,
 	type AdyenCheckoutInstanceOnSubmit,

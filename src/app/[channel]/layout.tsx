@@ -1,7 +1,9 @@
 import { type ReactNode } from "react";
+import { notFound } from "next/navigation";
 import { executePublicGraphQL } from "@/lib/graphql";
 import { ChannelsListDocument } from "@/gql/graphql";
 import { DefaultChannelSlug } from "@/app/config";
+import { validateChannel } from "@/lib/auth/validation";
 
 /**
  * Generate static params for channel routes.
@@ -48,6 +50,11 @@ export const generateStaticParams = async () => {
 	return channels.map((channel) => ({ channel }));
 };
 
-export default function ChannelLayout({ children }: { children: ReactNode }) {
+export default function ChannelLayout({ children, params }: { children: ReactNode; params: { channel: string } }) {
+	// Validate channel parameter to prevent directory traversal and injection
+	const validation = validateChannel(params.channel);
+	if (!validation.valid) {
+		notFound();
+	}
 	return children;
 }

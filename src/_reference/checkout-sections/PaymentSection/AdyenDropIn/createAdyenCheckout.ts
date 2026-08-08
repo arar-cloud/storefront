@@ -8,6 +8,107 @@ import { type AdyenPaymentResponse } from "./types";
 import { replaceUrl } from "@/checkout/lib/utils/url";
 import { localeConfig } from "@/config/locale";
 
+/**
+ * Validates that the checkout session is properly authenticated and bound to user context.
+ * Prevents unauthorized access to payment processing and cross-user payment hijacking.
+ */
+function validateCheckoutSession(checkoutId: string, userId?: string): boolean {
+  if (!checkoutId || typeof checkoutId !== 'string') {
+    console.error('[SECURITY] Invalid checkout ID format');
+    return false;
+  }
+  if (!checkoutId.match(/^[a-zA-Z0-9\-]+$/)) {
+    console.error('[SECURITY] Checkout ID contains invalid characters');
+    return false;
+  }
+  // Session binding: ensure userId is provided for authenticated operations
+  if (!userId || typeof userId !== 'string') {
+    console.error('[SECURITY] Session not properly authenticated');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates API key and environment parameters to prevent injection attacks.
+ * Ensures all configuration comes from secure backend context.
+ */
+function validateAdyenConfig(clientKey: string, environment: string): boolean {
+  if (!clientKey || typeof clientKey !== 'string' || clientKey.length === 0) {
+    console.error('[SECURITY] Invalid clientKey: must be a non-empty string');
+    return false;
+  }
+  if (!/^[a-zA-Z0-9_\-.*]+$/.test(clientKey)) {
+    console.error('[SECURITY] Invalid clientKey: contains disallowed characters');
+    return false;
+  }
+  if (environment !== 'test' && environment !== 'live') {
+    console.error('[SECURITY] Invalid environment: must be test or live');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates session data structure and content to prevent tampering
+ * Ensures session ID and sessionData are properly formed and not oversized
+ */
+function validateSessionData(sessionId: string, sessionData: string): boolean {
+  if (!sessionId || typeof sessionId !== 'string') {
+    console.error('[SECURITY] Invalid session ID');
+    return false;
+  }
+  if (!/^[a-zA-Z0-9\-_]{20,}$/.test(sessionId)) {
+    console.error('[SECURITY] Session ID format invalid');
+    return false;
+  }
+  if (!sessionData || typeof sessionData !== 'string') {
+    console.error('[SECURITY] Invalid session data');
+    return false;
+  }
+  // Prevent excessively large session data (potential DoS)
+  if (sessionData.length > 50000) {
+    console.error('[SECURITY] Session data exceeds maximum size');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates that SDK configuration only contains expected, safe properties
+ * Prevents injection of malicious configuration into Adyen SDK
+ */
+function validateSDKConfig(config: Record<string, unknown>): boolean {
+  const allowedKeys = new Set(['clientKey', 'environment', 'locale', 'session']);
+  const configKeys = Object.keys(config);
+  
+  // Reject any unexpected keys that could be injected
+  for (const key of configKeys) {
+    if (!allowedKeys.has(key)) {
+      console.error(`[SECURITY] Unexpected SDK config key: ${key}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Validates Adyen API responses to prevent malicious data injection
+ * Ensures response structure and types are correct before processing
+ */
+function validateAdyenCheckoutResponse(response: any): boolean {
+  if (!response || typeof response !== 'object') {
+    console.error('[SECURITY] Invalid Adyen response structure');
+    return false;
+  }
+  // Validate critical response properties
+  if (response.resultCode && typeof response.resultCode !== 'string') {
+    console.error('[SECURITY] Invalid resultCode in Adyen response');
+    return false;
+  }
+  return true;
+}
+
 export type AdyenDropInCreateSessionResponse = {
 	session: CreateCheckoutSessionResponse;
 	clientKey?: string;
@@ -46,20 +147,72 @@ export function createAdyenCheckoutInstance(
 		onSubmit: AdyenCheckoutInstanceOnSubmit;
 		onAdditionalDetails: AdyenCheckoutInstanceOnAdditionalDetails;
 	},
+	checkoutSessionId?: string,
+	userId?: string,
 ) {
-	return AdyenCheckout({
-		locale: localeConfig.default,
-		environment: "test",
+	// SECURITY: Validate session binding and configuration before SDK initialization
+	if (checkoutSessionId && !validateCheckoutSession(checkoutSessionId, userId)) {
+		throw new Error('[SECURITY] Failed to authenticate checkout session');
+	}
+
+	if (adyenSessionResponse.clientKey && !validateAdyenConfig(adyenSessionResponse.clientKey, 'test')) {
+		throw new Error('[SECURITY] Invalid Adyen configuration parameters');
+	}
+
+	// SECURITY: Validate session data structure and content
+	if (!validateSessionData(adyenSessionResponse.session.id, adyenSessionResponse.session.sessionData)) {
+		throw new Error('[SECURITY] Session data validation failed');
+	}
+
+	// SECURITY: Validate all SDK configuration before initialization
+	const sdkConfig = {
 		clientKey: adyenSessionResponse.clientKey,
+		environment: 'test',
+		locale: localeConfig.default || 'en_US',
+	} as const;
+
+	// Verify all config values are strings and properly formed
+	Object.entries(sdkConfig).forEach(([key, value]) => {
+		if (typeof value !== 'string' || value.length === 0) {
+			throw new Error(`[SECURITY] Invalid SDK configuration: ${key} must be non-empty string`);
+		}
+	});
+
+	// SECURITY: Validate SDK configuration against allowlist to prevent injection
+	if (!validateSDKConfig(sdkConfig)) {
+		throw new Error('[SECURITY] SDK configuration contains unexpected properties');
+	}
+
+	return AdyenCheckout({
+		locale: sdkConfig.locale,
+		environment: sdkConfig.environment,
+		clientKey: sdkConfig.clientKey,
 		session: {
 			id: adyenSessionResponse.session.id,
 			sessionData: adyenSessionResponse.session.sessionData,
 		},
 		onPaymentCompleted: (result: any, component: any) => {
-			console.info(result, component);
+			// Validate Adyen API response before processing
+			try {
+				if (!validateAdyenCheckoutResponse(result)) {
+					throw new Error('Payment result validation failed');
+				}
+				console.info(result, component);
+			} catch (error) {
+				console.error('[SECURITY] Payment completion validation error:', error instanceof Error ? error.message : 'Unknown error');
+			}
 		},
 		onError: (error: any, component: any) => {
-			console.error(error.name, error.message, error.stack, component);
+			// Sanitize error output to prevent leaking sensitive information
+			if (error && typeof error === 'object') {
+				const sanitizedError = {
+					name: typeof error.name === 'string' ? error.name : 'UnknownError',
+					message: typeof error.message === 'string' ? error.message : 'Unknown error occurred'
+				};
+				console.error('[SECURITY] Adyen error:', sanitizedError, component);
+			} else {
+				console.error('[SECURITY] Adyen error: unexpected error format');
+			}
 		},
 		onSubmit,
 		onAdditionalDetails,

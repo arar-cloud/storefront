@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeRawGraphQL, getUserMessage } from "@/lib/graphql";
+import { validateEmail, validateRedirectUrl, checkRateLimit } from "@/lib/auth/validation";
 
 const REQUEST_PASSWORD_RESET_MUTATION = `
   mutation RequestPasswordReset($email: String!, $channel: String!, $redirectUrl: String!) {
@@ -27,6 +28,34 @@ interface RequestPasswordResetResult {
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as ResetPasswordRequest;
+	
+	// Rate limit by email
+	const rateCheck = checkRateLimit(`reset:${body.email}`);
+	if (!rateCheck.allowed) {
+		return NextResponse.json({ errors: [{ message: rateCheck.error }] }, { status: 429 });
+	}
+	
+	// Validate email format
+	const emailValidation = validateEmail(body.email);
+	if (!emailValidation.valid) {
+		return NextResponse.json({ errors: [{ message: emailValidation.error }] }, { status: 400 });
+	}
+	
+	// Validate channel parameter - prevent directory traversal
+	if (!body.channel || typeof body.channel !== "string") {
+		return NextResponse.json({ errors: [{ message: "Invalid channel parameter" }] }, { status: 400 });
+	}
+	
+	const channelRegex = /^[a-zA-Z0-9._-]+$/;
+	if (!channelRegex.test(body.channel)) {
+		return NextResponse.json({ errors: [{ message: "Invalid channel format" }] }, { status: 400 });
+	}
+	
+	// Validate redirect URL
+	const redirectValidation = validateRedirectUrl(body.redirectUrl);
+	if (!redirectValidation.valid) {
+		return NextResponse.json({ errors: [{ message: redirectValidation.error }] }, { status: 400 });
+	}
 	const { email, channel, redirectUrl } = body;
 
 	if (!email || !channel || !redirectUrl) {

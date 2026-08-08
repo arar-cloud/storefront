@@ -15,22 +15,88 @@
  * - The `src/gql/` directory is AUTO-GENERATED - do not edit manually
  * - The checkout module has its own types in `src/checkout/graphql/index.ts`
  * - Always run `pnpm run generate` after changing GraphQL queries
+ *
+ * ## Security Guidelines
+ *
+ * ### INPUT VALIDATION (HIGH PRIORITY)
+ * All query variables must be validated before passing to the API:
+ * 1. Define explicit validation schemas for every GraphQL operation using zod or joi
+ * 2. Example:
+ *    ```ts
+ *    const ProductFilterSchema = z.object({
+ *      query: z.string().max(255).regex(/^[a-zA-Z0-9\s-]*$/, 'Invalid'),
+ *      categoryId: z.string().uuid('Invalid UUID'),
+ *      minPrice: z.number().min(0),
+ *    });
+ *    const validatedInput = ProductFilterSchema.parse(userInput);
+ *    ```
+ * 3. Validate: string length, UUID format, numeric ranges, enum values, array lengths
+ *
+ * ### MUTATION PARAMETER SAFETY
+ * All mutations must validate input parameters against expected schemas before execution.
+ *
+ * ### XSS PREVENTION
+ * User-controlled data from GraphQL responses must be properly escaped when rendered.
+ * React auto-escapes by default; sanitize HTML content with DOMPurify or allow-list patterns.
+ *
+ * ### AUTH/SESSION HARDENING
+ * Verify user session validity before executing authenticated mutations.
+ * Check permissions and rate limit sensitive operations.
  */
 import { loadEnvConfig } from "@next/env";
 import type { CodegenConfig } from "@graphql-codegen/cli";
+import { URL } from "url";
 
 loadEnvConfig(process.cwd());
 
-let schemaUrl = process.env.NEXT_PUBLIC_SALEOR_API_URL;
+/**
+ * Validates and parses the Saleor API URL from environment.
+ * Prevents schema poisoning via malicious NEXT_PUBLIC_SALEOR_API_URL.
+ */
+function validateSaleorApiUrl(urlString: string | undefined): string {
+	if (!urlString) {
+		throw new Error(
+			"NEXT_PUBLIC_SALEOR_API_URL environment variable is required but not set"
+		);
+	}
+
+	try {
+		const parsedUrl = new URL(urlString);
+		// Enforce HTTPS in production
+		if (process.env.NODE_ENV === "production" && parsedUrl.protocol !== "https:") {
+			throw new Error("NEXT_PUBLIC_SALEOR_API_URL must use HTTPS protocol in production");
+		}
+		// Validate hostname is not localhost or internal IP in production
+		if (
+			process.env.NODE_ENV === "production" &&
+			/^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)/.test(parsedUrl.hostname)
+		) {
+			throw new Error(
+				"NEXT_PUBLIC_SALEOR_API_URL must not point to localhost/internal IP in production"
+			);
+		}
+		return parsedUrl.toString();
+	} catch (error) {
+		throw new Error(
+			`Invalid NEXT_PUBLIC_SALEOR_API_URL: ${error instanceof Error ? error.message : String(error)}`
+		);
+	}
+}
+
+const saleorApiUrl = validateSaleorApiUrl(process.env.NEXT_PUBLIC_SALEOR_API_URL);
+
+let schemaUrl = saleorApiUrl;
 
 if (process.env.GITHUB_ACTION === "generate-schema-from-file") {
 	schemaUrl = "schema.graphql";
 }
 
-if (!schemaUrl) {
+// Additional validation: ensure schema URL is set and secure
+if (!schemaUrl || typeof schemaUrl !== "string") {
 	console.error(
-		"Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.",
+		"Schema URL validation failed: schemaUrl must be a non-empty string.",
 	);
+	console.error("Before GraphQL types can be generated, you need to set NEXT_PUBLIC_SALEOR_API_URL environment variable.");
 	console.error("Follow development instructions in the README.md file.");
 	process.exit(1);
 }
