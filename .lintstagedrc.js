@@ -1,11 +1,16 @@
-const LINT_EXTENSIONS = "*.{js,jsx,ts,tsx,mjs,cjs}";
-
+/**
+ * lint-staged configuration.
+ * Runs the same ESLint and Prettier tools used by the project so pre-commit checks match CI.
+ */
 module.exports = {
-  // ESLint receives the file list as separate arguments; lint-staged escapes them.
-  [LINT_EXTENSIONS]: (files) => {
-    const args = files.map((file) => `"${file.replace(/(["\\$`])/g, "\\$1")}"`);
-    return [`eslint --fix ${args.join(" ")}`];
-  },
-  // Prettier only handles files ESLint does not already format.
-  "*.{json,md,mdx,css,scss,yml,yaml,html}": ["prettier --write"],
+    '*.{js,jsx,ts,tsx,mjs,cjs}': [
+        'eslint --fix --max-warnings=0',
+        'prettier --write'
+    ],
+    '*.{json,md,yml,yaml,css,scss,html}': [
+        'prettier --write'
+    ],
+    '*.{graphql,gql}': [
+        'prettier --write'
+    ]
 };
