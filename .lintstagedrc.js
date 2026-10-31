@@ -1,16 +1,19 @@
-/**
- * lint-staged configuration.
- * Runs the same ESLint and Prettier tools used by the project so pre-commit checks match CI.
- */
-module.exports = {
-    '*.{js,jsx,ts,tsx,mjs,cjs}': [
-        'eslint --fix --max-warnings=0',
-        'prettier --write'
-    ],
-    '*.{json,md,yml,yaml,css,scss,html}': [
-        'prettier --write'
-    ],
-    '*.{graphql,gql}': [
-        'prettier --write'
-    ]
+// https://nextjs.org/docs/basic-features/eslint#lint-staged
+
+import path from 'path';
+
+const buildEslintCommand = (filenames) => {
+    const files = filenames
+        .map((filename) => path.relative(process.cwd(), filename))
+        .map((filename) => `"${filename}"`)
+        .join(' ');
+
+    return `pnpm eslint --fix ${files}`;
 };
+
+const config = {
+    '*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}': [buildEslintCommand],
+    '*.*': 'prettier --write --ignore-unknown',
+};
+
+export default config;
