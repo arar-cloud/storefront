@@ -1,19 +1,11 @@
-// https://nextjs.org/docs/basic-features/eslint#lint-staged
+const LINT_EXTENSIONS = "*.{js,jsx,ts,tsx,mjs,cjs}";
 
-import path from "path";
-
-const buildEslintCommand = (filenames) => {
-	const files = filenames
-		.map((filename) => path.relative(process.cwd(), filename))
-		.map((filename) => `"${filename}"`)
-		.join(" ");
-
-	return `pnpm eslint --fix ${files}`;
+module.exports = {
+  // ESLint receives the file list as separate arguments; lint-staged escapes them.
+  [LINT_EXTENSIONS]: (files) => {
+    const args = files.map((file) => `"${file.replace(/(["\\$`])/g, "\\$1")}"`);
+    return [`eslint --fix ${args.join(" ")}`];
+  },
+  // Prettier only handles files ESLint does not already format.
+  "*.{json,md,mdx,css,scss,yml,yaml,html}": ["prettier --write"],
 };
-
-const config = {
-	"*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}": [buildEslintCommand],
-	"*.*": "prettier --write --ignore-unknown",
-};
-
-export default config;
