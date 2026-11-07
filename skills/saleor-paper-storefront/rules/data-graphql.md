@@ -9,6 +9,13 @@ Modifying GraphQL queries and regenerating types correctly ensures type safety, 
 
 ---
 
+## Query Payload Efficiency
+
+- **Request only rendered fields**: Each query must select only the fields its consuming component renders. Do not copy full product selections into list or summary views.
+- **Share fragments for repeated shapes**: Put a product summary shape in one fragment and reuse it across listing, search, and related-product queries to keep payloads consistent and small.
+- **Limit nested collections on lists**: Do not fetch all variants, images, or attributes on listing pages when only a thumbnail or price range is shown. Fetch those collections on the PDP only.
+- **Regenerate types after changes**: After editing query selections, regenerate types as described below so generated types match the trimmed selections.
+
 ## File Locations
 
 | Purpose                           | Location                         | Generated Types                   | Regenerate With          |
