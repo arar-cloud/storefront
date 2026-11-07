@@ -15,6 +15,14 @@ Create and style UI components with design tokens and shadcn/ui primitives.
 | Navigation                 | `src/ui/components/nav/`  |
 | Cart                       | `src/ui/components/cart/` |
 
+## Image and Bundle Performance
+
+- **Use optimized image components**: Render product and banner images with `next/image`, providing explicit `width`/`height` or `fill` with a sized parent, and an accurate `sizes` value.
+- **Prevent layout shift**: Reserve space for images and dynamic content with an aspect-ratio container so that loading does not shift the layout (CLS).
+- **Keep client components minimal**: Mark a component `"use client"` only when it needs state, effects, or browser APIs. Keep presentational components as server components to reduce shipped JavaScript.
+- **Lazy-load non-critical UI**: Load the cart drawer, mobile navigation menu, and modal dialogs with `next/dynamic` so they are not part of the initial bundle.
+- **Import icons and utilities selectively**: Import individual icons and functions by name. Do not import whole icon sets or utility libraries into shared components.
+
 ## Design Tokens
 
 Use semantic Tailwind classes that reference CSS variables from `src/styles/brand.css`:
