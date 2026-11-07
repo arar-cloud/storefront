@@ -6,6 +6,12 @@ Understanding the caching architecture, Cache Components (PPR), and revalidation
 
 ---
 
+## Avoiding Redundant Fetches and Over-Invalidation
+
+- **Deduplicate per request**: Wrap shared Saleor data fetchers (product by slug, channel config) in React `cache()` so `generateMetadata` and the page component reuse one network call instead of issuing two.
+- **Cache display data with explicit lifetimes**: Use `cacheLife` profiles on display-page data so product and listing content is not refetched on every render.
+- **Scope revalidation with tags**: Tag cached Saleor data with `cacheTag` and revalidate only the affected tags. Avoid broad path revalidation that discards unrelated cached pages.
+
 ## Data Freshness Model
 
 ### The Key Principle

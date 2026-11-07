@@ -8,6 +8,13 @@ For variant selection logic specifically, see `product-variants.md`.
 
 > **Start here:** Read the [Data Flow](#data-flow) section first - it explains how everything connects.
 
+## Performance Optimizations
+
+- **LCP image priority**: The first (hero) gallery image must be rendered with `priority` (or `fetchpriority="high"`) and must not be lazy-loaded. All other gallery images should use lazy loading.
+- **Responsive sizes**: Every gallery image must provide an accurate `sizes` attribute matching its layout width so the browser selects the smallest adequate variant.
+- **Lazy thumbnails and carousel slides**: Off-screen thumbnails and carousel slides load on demand. Do not fetch all variant images on the server for the initial paint.
+- **Dynamic import for heavy gallery code**: Load the zoom/lightbox and carousel client components with `next/dynamic` (`ssr: false` only when the component is purely interactive) to keep them out of the initial JavaScript bundle.
+
 ## Architecture Overview
 
 ```
